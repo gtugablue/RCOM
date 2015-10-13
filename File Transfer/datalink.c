@@ -5,7 +5,11 @@ int llopen(int porta, int mode) {
 }
 
 int llwrite(int fd, char * buffer, int length) {
+	unsigned i;
+	for (i = 0; i < length; ++i)
+	{
 
+	}
 }
 
 int llread(int fd, char * buffer) {
@@ -15,6 +19,8 @@ int llread(int fd, char * buffer) {
 int llclose(int fd) {
 
 }
+
+int write_frame(int fd, char *buffer, int );
 
 char* get_packet(int fd) {
 	state_t state = START;
@@ -101,4 +107,4 @@ int read_byte(int fd, unsigned char *c)
 	printf("Read 0x%X\n", + *c);
 	return 0;
 }
-*/
+ */
