@@ -1,10 +1,16 @@
 #include "datalink.c"
 
-
+typedef enum {
+	START,
+	FLAG_RCV,
+	A_RCV,
+	C_RCV,
+	BCC_OK,
+	STOP
+} state_t;
 
 /*int read_packet(int fd, unsigned char C) // TODO
 {
-	typedef enum {START, FLAG_RCV, A_RCV, C_RCV, BCC_OK, STOP} state_t;
 	state_t state = START;
 	unsigned char byte;
 
