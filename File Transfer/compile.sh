@@ -1,1 +1,1 @@
-gcc -Wall communicator.c serial.c -o communicator
+gcc -Wall receiver.c serial.c -o receiver
