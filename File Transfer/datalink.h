@@ -32,7 +32,14 @@ typedef struct {
 /*
  * Describes the receiver state-machine states
  */
-typedef enum {START, FLAG_RCV, A_RCV, C_RCV, BCC_OK, STOP} state_t;
+typedef enum {START,
+				FLAG_RCV,
+				A_RCV,
+				C_RCV,
+				BCC1_RCV,
+				DATA_ESC_RCV,
+				DATA_RCV,
+				STOP} state_t;
 
 /*
  * Define the program mode (either reader or writer)
