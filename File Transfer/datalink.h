@@ -7,6 +7,33 @@
 #define OK 0
 #define ERROR -1
 
+#define FLAG 126
+#define A_TRANSMITTER 0x03
+#define A_RECEIVER 0x01
+#define C_SET 0x07
+#define C_DISC 0x0B
+#define C_UA 0x03
+#define C_RR(n) ((n << 5) | 1)
+#define C_REJ(n) ((n << 5) | 5)
+#define C_INFO(n) (n << 5)
+
+#define SET 0
+#define UA 1
+#define DATA 2
+
+#define MAX_BUFFER_LENGTH 30
+
+typedef struct {
+	int length = 0;
+	char buffer[MAX_BUFFER_LENGTH];
+	int type;
+} packet_t;
+
+/*
+ * Describes the receiver state-machine states
+ */
+typedef enum {START, FLAG_RCV, A_RCV, C_RCV, BCC_OK, STOP} state_t;
+
 /*
  * Define the program mode (either reader or writer)
  */
