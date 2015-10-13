@@ -1,4 +1,4 @@
-#include "datalink.c"
+#include "datalink.h"
 
 int llopen(int porta, int mode) {
 
@@ -20,7 +20,11 @@ int llclose(int fd) {
 
 }
 
-int write_frame(int fd, char *buffer, int );
+int write_frame(int fd, frame_t frame) // TODO
+{
+	if (write(fd, FLAG, 1) != 1) return 1;
+	if (write(fd, A_TRANSMITTER, 1) != 1) return 1;
+}
 
 char* get_packet(int fd) {
 	state_t state = START;

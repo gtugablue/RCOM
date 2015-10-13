@@ -24,7 +24,8 @@
 #define MAX_BUFFER_LENGTH 256
 
 typedef struct {
-	int length = 0;
+	unsigned sequence_number;
+	unsigned length = 0;
 	char buffer[MAX_BUFFER_LENGTH];
 	int type;
 } frame_t;
