@@ -1,4 +1,5 @@
 #include "datalink.h"
+#include <stdlib.h>
 
 int llopen(int porta, int mode) {
 
@@ -20,10 +21,54 @@ int llclose(int fd) {
 
 }
 
-int write_frame(int fd, frame_t frame) // TODO
+int write_frame(int fd, frame_t frame) // UNTESTED
 {
 	if (write(fd, FLAG, 1) != 1) return 1;
 	if (write(fd, A_TRANSMITTER, 1) != 1) return 1;
+	if (write(fd, frame.sequence_number, 1) != 1) return 1;
+	if (write(fd, A_TRANSMITTER ^ frame.sequence_number, 1) != 1) return 1;
+
+	unsigned char *stuffed;
+	unsigned length;
+	if (byte_stuffing(&frame.buffer, frame.length, &stuffed, &length)) return 1;
+
+	if (write(fd, stuffed, length) != length) return 1;
+
+	int i;
+	unsigned char bcc2 = stuffed[0];
+	for (i = 1; i < length; ++i)
+	{
+		bcc2 ^= stuffed[i];
+	}
+
+	if (write(fd, bcc2, 1) != 1) return 1;
+	if (write(fd, FLAG, 1) != 1) return 1;
+	return 0;
+}
+
+int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length)
+{
+	unsigned char stuffed[2 * length];
+	unsigned i;
+	unsigned j = 0;
+	for (i = 0, j = 0; i < length; ++i, ++j)
+	{
+		if (src[i] == FLAG)
+		{
+			stuffed[j] = ESC;
+			stuffed[++j] = FLAG ^ ESC_XOR;
+		}
+		else if (src[i] == ESC)
+		{
+			stuffed[j] = ESC;
+			stuffed[++j] = ESC ^ ESC_XOR;
+		}
+		else
+			stuffed[j] = src[i];
+	}
+	if ((*dst = malloc(j - 1)) == NULL) return 1;
+	memcpy(*dst, stuffed, j - 1);
+	return 0;
 }
 
 char* get_frame(int fd) {

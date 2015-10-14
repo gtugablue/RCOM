@@ -8,6 +8,8 @@
 #define ERROR -1
 
 #define FLAG 126
+#define ESC 0x7D
+#define ESC_XOR 0x20
 #define A_TRANSMITTER 0x03
 #define A_RECEIVER 0x01
 #define C_DATA(S) ((S) << 5)
