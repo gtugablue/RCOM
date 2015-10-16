@@ -100,7 +100,7 @@ char* get_frame(int fd) {
 			}
 			break;
 		case A_RCV:
-			if(byte == flag) {
+			if(byte == FLAG) {
 				frame.length = 1;
 				state = FLAG_RCV;
 			} else if(byte == C_SET) {
@@ -151,7 +151,7 @@ char* get_frame(int fd) {
 			} else if(byte == FLAG) {
 				frame.buffer[frame.length++] = byte;
 				if(bcc2_checks(&frame)) {
-					state = stop;
+					state = STOP;
 				}
 			} else {
 				frame.buffer[frame.length++] = byte;
