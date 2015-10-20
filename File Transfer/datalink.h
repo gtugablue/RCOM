@@ -27,7 +27,7 @@
 
 typedef struct {
 	unsigned sequence_number;
-	unsigned length = 0;
+	unsigned length;
 	char buffer[MAX_BUFFER_LENGTH];
 	int type;
 } frame_t;
@@ -73,5 +73,7 @@ int llread(int fd, char * buffer);
  * Returns >0 if success, <0 on error
  */
 int llclose(int fd);
+
+int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 
 #endif
