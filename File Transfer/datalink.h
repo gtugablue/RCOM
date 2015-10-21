@@ -28,7 +28,7 @@
 typedef struct {
 	unsigned sequence_number;
 	unsigned length;
-	char buffer[MAX_BUFFER_LENGTH];
+	unsigned char *buffer;
 	int type;
 } frame_t;
 

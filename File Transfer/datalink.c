@@ -20,12 +20,12 @@ int llopen(int porta, int mode) {
 	return 0;
 }
 
-int llwrite(int fd, char * buffer, int length) {
-	unsigned i;
-	for (i = 0; i < length; ++i)
-	{
-
-	}
+int llwrite(int fd, const unsigned char *buffer, int length) {
+	frame_t frame;
+	frame.sequence_number = 0;
+	if ((frame.buffer = malloc(length)) == NULL) return 1;
+	memcpy(frame.buffer, buffer, length);
+	if (write_frame(fd, &frame)) return 1;
 	return 0;
 }
 
@@ -37,19 +37,19 @@ int llclose(int fd) {
 	return 0;
 }
 
-int write_frame(int fd, frame_t frame) // UNTESTED
+int write_frame(int fd, const frame_t *frame) // UNTESTED
 {
 	char msg = FLAG;
 	if (write(fd, &msg, 1) != 1) return 1;
 	msg = A_TRANSMITTER;
 	if (write(fd, &msg, 1) != 1) return 1;
-	if (write(fd, (char*)&frame.sequence_number, 1) != 1) return 1;
-	msg = (char)(A_TRANSMITTER ^ frame.sequence_number);
+	if (write(fd, (unsigned char *)(frame->sequence_number), 1) != 1) return 1;
+	msg = (char)(A_TRANSMITTER ^ frame->sequence_number);
 	if (write(fd, &msg, 1) != 1) return 1;
 
 	unsigned char *stuffed;
 	unsigned length;
-	if (byte_stuffing((unsigned char *)frame.buffer, frame.length, &stuffed, &length)) return 1;
+	if (byte_stuffing(frame->buffer, frame->length, &stuffed, &length)) return 1;
 
 	if (write(fd, stuffed, length) != length) return 1;
 
@@ -59,6 +59,7 @@ int write_frame(int fd, frame_t frame) // UNTESTED
 	{
 		bcc2 ^= stuffed[i];
 	}
+	free(stuffed);
 
 	msg = bcc2;
 	if (write(fd, (char*)&msg, 1) != 1) return 1;
