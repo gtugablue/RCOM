@@ -26,7 +26,7 @@
 #define MAX_BUFFER_LENGTH 256
 
 typedef struct {
-	unsigned sequence_number;
+	unsigned char sequence_number;
 	unsigned length;
 	unsigned char *buffer;
 	int type;

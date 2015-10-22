@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <string.h>
 
+int write_frame(int fd, const frame_t *frame);
+
 int read_byte(int fd, unsigned char *c)
 {
 	int res = read(fd,c,1);
@@ -43,7 +45,7 @@ int write_frame(int fd, const frame_t *frame) // UNTESTED
 	if (write(fd, &msg, 1) != 1) return 1;
 	msg = A_TRANSMITTER;
 	if (write(fd, &msg, 1) != 1) return 1;
-	if (write(fd, (unsigned char *)(frame->sequence_number), 1) != 1) return 1;
+	if (write(fd, &frame->sequence_number, 1) != 1) return 1;
 	msg = (char)(A_TRANSMITTER ^ frame->sequence_number);
 	if (write(fd, &msg, 1) != 1) return 1;
 
