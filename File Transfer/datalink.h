@@ -1,6 +1,8 @@
 #ifndef DATALINK_H
 #define DATALINK_H
 
+#include <stdlib.h>
+
 /*
  * Describe function return values
  */
@@ -25,55 +27,61 @@
 
 #define MAX_BUFFER_LENGTH 256
 
+typedef enum {
+	CMD_FRAME,
+	DATA_FRAME
+} frame_type_t;
+
 typedef struct {
 	unsigned char sequence_number;
 	unsigned length;
 	unsigned char *buffer;
-	int type;
+	unsigned char cmd;
+	frame_type_t type;
 } frame_t;
 
 /*
  * Describes the receiver state-machine states
  */
 typedef enum {START,
-				FLAG_RCV,
-				A_RCV,
-				C_RCV,
-				BCC1_RCV,
-				DATA_ESC_RCV,
-				DATA_RCV,
-				STOP} state_t;
+	FLAG_RCV,
+	A_RCV,
+	C_RCV,
+	BCC1_RCV,
+	DATA_ESC_RCV,
+	DATA_RCV,
+	STOP} state_t;
 
-/*
- * Define the program mode (either reader or writer)
- */
+	/*
+	 * Define the program mode (either reader or writer)
+	 */
 #define TRANSMITTER 0
 #define RECEIVER 1
 
-/*
- * Starts the connection via serial-port, allowing for it to be either reader or writer
- * Returns port fd, -1 if error
- */
-int llopen(int porta, int mode);
+	/*
+	 * Starts the connection via serial-port, allowing for it to be either reader or writer
+	 * Returns port fd, -1 if error
+	 */
+	int llopen(int porta, int mode);
 
-/*
- * Writes length bytes from buffer to fd
- * Return number of bytes written on success, -1 if error
- */
-int llwrite(int fd, const unsigned char * buffer, int length);
+	/*
+	 * Writes length bytes from buffer to fd
+	 * Return number of bytes written on success, -1 if error
+	 */
+	int llwrite(int fd, const unsigned char * buffer, int length);
 
-/*
- * Reads from fd to buffer
- * Returns buffer size if ok, -1 if error
- */
-int llread(int fd, char * buffer);
+	/*
+	 * Reads from fd to buffer
+	 * Returns buffer size if ok, -1 if error
+	 */
+	int llread(int fd, char * buffer);
 
-/*
- * Closes fd data link
- * Returns >0 if success, <0 on error
- */
-int llclose(int fd);
+	/*
+	 * Closes fd data link
+	 * Returns >0 if success, <0 on error
+	 */
+	int llclose(int fd);
 
-int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
+	int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 
 #endif

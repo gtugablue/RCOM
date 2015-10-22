@@ -1,10 +1,10 @@
 #include "datalink.h"
-#include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 
-int write_frame(int fd, const frame_t *frame);
+int send_cmd_frame(int fd, const frame_t *frame);
+int send_data_frame(int fd, const frame_t *frame);
 
 int read_byte(int fd, unsigned char *c)
 {
@@ -27,7 +27,7 @@ int llwrite(int fd, const unsigned char *buffer, int length) {
 	frame.sequence_number = 0;
 	if ((frame.buffer = malloc(length)) == NULL) return 1;
 	memcpy(frame.buffer, buffer, length);
-	if (write_frame(fd, &frame)) return 1;
+	if (send_data_frame(fd, &frame)) return 1;
 	return 0;
 }
 
@@ -39,10 +39,22 @@ int llclose(int fd) {
 	return 0;
 }
 
-int write_frame(int fd, const frame_t *frame) // UNTESTED
+int send_cmd_frame(int fd, const frame_t *frame)
+{
+	unsigned char msg[] = {FLAG,
+			A_TRANSMITTER,
+			frame->cmd,
+			A_TRANSMITTER ^ frame->cmd,
+			FLAG};
+	if (write(fd, msg, sizeof(msg)) != sizeof(msg)) return 1;
+
+	return 0;
+}
+
+int send_data_frame(int fd, const frame_t *frame) // UNTESTED
 {
 	char msg = FLAG;
-	if (write(fd, &msg, 1) != 1) return 1;
+	if (write(fd, FLAG, 1) != 1) return 1;
 	msg = A_TRANSMITTER;
 	if (write(fd, &msg, 1) != 1) return 1;
 	if (write(fd, &frame->sequence_number, 1) != 1) return 1;
@@ -175,7 +187,7 @@ frame_t* get_frame(int fd) {
 			} else if(byte == FLAG) {
 				frame->buffer[frame->length++] = byte;
 				//if(bcc2_checks(&frame)) {
-					state = STOP;
+				state = STOP;
 				//}
 			} else {
 				frame->buffer[frame->length++] = byte;
