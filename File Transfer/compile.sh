@@ -1,1 +1,1 @@
-gcc -Wall receiver.c serial.c -o receiver
+gcc -Wall serial.c communicator.c datalink.c -o file_transfer

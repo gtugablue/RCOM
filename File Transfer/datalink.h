@@ -60,7 +60,7 @@ int llopen(int porta, int mode);
  * Writes length bytes from buffer to fd
  * Return number of bytes written on success, -1 if error
  */
-int llwrite(int fd, char * buffer, int length);
+int llwrite(int fd, const unsigned char * buffer, int length);
 
 /*
  * Reads from fd to buffer
