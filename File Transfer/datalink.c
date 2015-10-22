@@ -53,32 +53,40 @@ int send_cmd_frame(int fd, const frame_t *frame)
 
 int send_data_frame(int fd, const frame_t *frame) // UNTESTED
 {
-	char msg = FLAG;
-	if (write(fd, FLAG, 1) != 1) return 1;
-	msg = A_TRANSMITTER;
-	if (write(fd, &msg, 1) != 1) return 1;
-	if (write(fd, &frame->sequence_number, 1) != 1) return 1;
-	msg = (char)(A_TRANSMITTER ^ frame->sequence_number);
-	if (write(fd, &msg, 1) != 1) return 1;
+	unsigned char ctrl = frame->sequence_number << 5;
+	unsigned char fh[] = {FLAG,
+			A_TRANSMITTER,
+			ctrl,
+			A_TRANSMITTER ^ ctrl
+	};
 
-	unsigned char *stuffed;
+	unsigned char *data;
 	unsigned length;
-	if (byte_stuffing(frame->buffer, frame->length, &stuffed, &length)) return 1;
+	if (byte_stuffing(frame->buffer, frame->length, &data, &length)) return 1;
 
-	if (write(fd, stuffed, length) != length) return 1;
+	if (write(fd, data, length) != length) return 1;
 
 	int i;
-	unsigned char bcc2 = stuffed[0];
-	for (i = 1; i < length; ++i)
+	unsigned char bcc2;
+	if (length > 0)
 	{
-		bcc2 ^= stuffed[i];
+		bcc2 = data[0];
+		for (i = 1; i < length; ++i)
+		{
+			bcc2 ^= data[i];
+		}
 	}
-	free(stuffed);
+	else bcc2 = 0;
 
-	msg = bcc2;
-	if (write(fd, (char*)&msg, 1) != 1) return 1;
-	msg = FLAG;
-	if (write(fd, (char*)&msg, 1) != 1) return 1;
+	unsigned char ft[] = {bcc2,
+			FLAG
+	};
+
+	if (write(fd, fh, sizeof(fh)) != sizeof(fh)) return 1;
+	if (write(fd, data, length) != length) return 1;
+	if (write(fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
+
+	free(data);
 	return 0;
 }
 
@@ -203,58 +211,7 @@ frame_t* get_frame(int fd) {
 	return frame;
 }
 
-/*int read_frame(int fd, unsigned char C) // TODO
-{
-	state_t state = START;
-	unsigned char byte;
-
-	while(state != STOP) {
-
-		int ret = read_byte(fd, &byte);
-		if(ret != 0) {
-			perror("ERROR IN READ_BYTE\n");
-			exit(-1);
-		}
-
-		switch(state) {
-		case START:
-			if(byte == FLAG)
-				state = FLAG_RCV;
-			break;
-		case FLAG_RCV:
-			if(byte == A)
-				state = A_RCV;
-			else if(byte != FLAG)
-				state = START;
-			break;
-		case A_RCV:
-			if(byte == FLAG)
-				state = FLAG_RCV;
-			else if(byte == C)
-				state = C_RCV;
-			else
-				state = START;
-			break;
-		case C_RCV:
-			if(byte == FLAG)
-				state = FLAG;
-			else if(byte == (A ^ C))
-				state = BCC_OK;
-			else
-				state = START;
-			break;
-		case BCC_OK:
-			if(byte == FLAG)
-				state = STOP;
-			else
-				state = START;
-			break;
-		case STOP:
-			break;
-		}
-	}
-}
-
+/*
 int read_byte(int fd, unsigned char *c)
 {
 	int res = read(fd,c,1);
