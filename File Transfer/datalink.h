@@ -91,7 +91,7 @@ int llread(int fd, char * buffer);
 
 /*
  * Closes fd data link
- * Returns >0 if success, <0 on error
+ * Returns 0 if success, <0 on error
  */
 int llclose(int fd);
 
