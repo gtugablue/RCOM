@@ -63,6 +63,8 @@ typedef enum {START,
 
 #define INIT_CONNECTION_TRIES 5
 #define INIT_CONNECTION_RESEND_TIME 1
+#define FINAL_DISCONNECTION_TRIES 5
+#define FINAL_DISCONNECTION_RESEND_TIME 1
 
 typedef struct {
 	unsigned int fd;
