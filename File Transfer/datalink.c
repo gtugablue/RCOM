@@ -22,6 +22,7 @@ void alarm_handler() {
 		}
 		alarm(alrm_info.time_dif);
 	} else if(alrm_info.stop != NULL && !(*alrm_info.stop)) {
+		*(alrm_info.stop) = 2;
 		if(kill(getpid(), SIGINT) != 0) {
 			printf("ERROR (alarm_handler): unable to send SIGINT signal.");
 			return;
@@ -29,14 +30,14 @@ void alarm_handler() {
 	}
 }
 
-int write_timed_frame(alarm_info_t alrm_info_arg) {
+int write_timed_frame(alarm_info_t *alrm_info_arg) {
 
-	if(alrm_info_arg.frame == NULL || alrm_info_arg.tries_left == 0 || alrm_info_arg.time_dif == 0) {
+	if(alrm_info_arg->frame == NULL || alrm_info_arg->tries_left == 0 || alrm_info_arg->time_dif == 0) {
 		printf("ERROR (write_timed_frame): invalid alarm info parameters.");
 		return 1;
 	}
 
-	alrm_info = alrm_info_arg;
+	alrm_info = *alrm_info_arg;
 	signal(SIGALRM, alarm_handler);
 	if(send_frame(alrm_info.fd, alrm_info.frame))
 		return 1;
@@ -88,16 +89,25 @@ int llopen_transmitter(int fd) {
 	frame.buffer[0] = C_SET;
 	frame.type = CMD_FRAME;
 
-	if(send_frame(fd, &frame)) {
-		printf("ERROR (llopen_transmitter): unable to send SET.");
-		return 1;
-	}
+	unsigned int stop = 0;
+	alarm_info_t alarm_inf;
+	alarm_inf.fd = fd;
+	alarm_inf.tries_left = INIT_CONNECTION_TRIES;
+	alarm_inf.time_dif = INIT_CONNECTION_RESEND_TIME;
+	alarm_inf.frame = &frame;
+	alarm_inf.stop = &stop;
+
+	write_timed_frame(&alarm_inf);
 
 	frame_t *answer = get_frame(fd);
+	if(stop == 2) {
+		return 1;
+	}
 	if(invalid_frame(&frame) || answer->buffer[2] != C_UA) {
 		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame");
 		return 1;
 	}
+	stop = 1;
 
 	return 0;
 }
