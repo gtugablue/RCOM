@@ -77,42 +77,8 @@ int llopen(int porta, int mode) {
 	snprintf(dev, sizeof(dev), "/dev/ttyS%d", porta);
 	int vtime = 30;
 	int vmin = 0;
-	int fd = serial_initialize(dev, vmin, vtime);
-	if (fd < 0) return 1;
-
-	frame_t frame;
-	frame.sequence_number = 0;
-	frame.type = CMD_FRAME;
-	frame.cmd = C_SET;
-
-	if (send_cmd_frame(fd, frame)) return 1;
-	// TODO
-	return 0;
-}
-
-int llopen_receiver(int fd) {
-
-	frame_t *frame = get_frame(fd);
-
-	// TODO do we need this?
-	/*if(valid_frame(frame)) {
-		printf("ERROR (llopen_receiver): invalid frame received.");
-		return 1;
-	}*/
-
-	if(frame->type == SET) {
-
-	}
-
-	return 0;
-}
-
-int llopen(char *filename, int mode) {
-
-	int serial_fd = serial_initialize(filename, DEFAULT_VMIN, DEFAULT_VTIME);
-
-	if(serial_fd <= 0)
-		return -1;
+	int serial_fd = serial_initialize(dev, vmin, vtime);
+	if (serial_fd < 0) return -1;
 
 	switch(mode) {
 	case TRANSMITTER:
@@ -129,6 +95,34 @@ int llopen(char *filename, int mode) {
 	}
 
 	return serial_fd;
+}
+
+int llopen_transmitter(int fd) {
+	frame_t frame;
+	frame.sequence_number = 0;
+	frame.type = CMD_FRAME;
+
+	return 0;
+}
+
+int llopen_receiver(int fd) {
+
+	frame_t *frame = get_frame(fd);
+
+	// TODO do we need this?
+	/*if(valid_frame(frame)) {
+		printf("ERROR (llopen_receiver): invalid frame received.");
+		return 1;
+	}*/
+
+	if(valid_frame(frame)) {
+		printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame");
+		return 1;
+	}
+
+	// TODO respond with UA
+
+	return 0;
 }
 
 int llwrite(int fd, const unsigned char *buffer, int length) {
@@ -150,17 +144,20 @@ int llclose(int fd) {
 
 int send_cmd_frame(int fd, const frame_t *frame)
 {
+	if(frame->buffer == NULL || frame->length != 1)
+		return 1;
+
 	unsigned char msg[] = {FLAG,
 			A_TRANSMITTER,
-			frame->cmd,
-			A_TRANSMITTER ^ frame->cmd,
+			frame->buffer[0],
+			A_TRANSMITTER ^ frame->buffer[0],
 			FLAG};
 	if (write(fd, msg, sizeof(msg)) != sizeof(msg)) return 1;
 
 	return 0;
 }
 
-int send_data_frame(int fd, const frame_t *frame) // UNTESTED
+int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 {
 	unsigned char ctrl = frame->sequence_number << 5;
 	unsigned char fh[] = {FLAG,

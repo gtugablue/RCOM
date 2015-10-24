@@ -1,5 +1,5 @@
-#ifndef DATALINK_H
-#define DATALINK_H
+#ifndef __DATALINK_H
+#define __DATALINK_H
 
 #include <stdlib.h>
 
@@ -21,10 +21,7 @@
 #define C_RR(R) (((R) << 5) | 1)
 #define C_REJ(R) (((R) << 5) | 5)
 
-const char MSG_SET[] = { FLAG, A_TRANSMITTER, C_SET, A_TRANSMITTER ^ C_SET, FLAG };
-const char MSG_SET_SIZE = 5;
-const char MSG_UA[] = { FLAG, A_TRANSMITTER, C_UA, A_TRANSMITTER ^ C_UA, FLAG };
-const char MSG_UA_SIZE = 5;
+const char MSG_CMD_LENGTH = 5;
 
 #define SET 0
 #define UA 1
@@ -41,7 +38,6 @@ typedef struct {
 	unsigned char sequence_number;
 	unsigned length;
 	unsigned char *buffer;
-	unsigned char cmd;
 	frame_type_t type;
 } frame_t;
 
@@ -55,7 +51,8 @@ typedef enum {START,
 	BCC1_RCV,
 	DATA_ESC_RCV,
 	DATA_RCV,
-	STOP} state_t;
+	STOP
+} state_t;
 
 /*
  * Define the program mode (either reader or writer)
