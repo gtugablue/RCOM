@@ -4,6 +4,9 @@
 #include <string.h>
 #include <signal.h>
 
+int send_cmd_frame(int fd, const frame_t *frame);
+int send_data_frame(int fd, const frame_t *frame);
+
 unsigned int alrm_tries_left, alrm_time_dif, alrm_fd, alrm_msg_len;
 unsigned int *alrm_stop;
 char *alrm_msg;
@@ -52,9 +55,6 @@ int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries,
 	return 0;
 }
 
-int send_cmd_frame(int fd, const frame_t *frame);
-int send_data_frame(int fd, const frame_t *frame);
-
 int read_byte(int fd, unsigned char *c)
 {
 	int res = read(fd,c,1);
@@ -68,6 +68,20 @@ int read_byte(int fd, unsigned char *c)
 }
 
 int llopen(int porta, int mode) {
+	char dev[50];
+	snprintf(dev, sizeof(dev), "/dev/ttyS%d", porta);
+	int vtime = 30;
+	int vmin = 0;
+	int fd = serial_initialize(dev, vmin, vtime);
+	if (fd < 0) return 1;
+
+	frame_t frame;
+	frame.sequence_number = 0;
+	frame.type = CMD_FRAME;
+	frame.cmd = C_SET;
+
+	if (send_cmd_frame(fd, frame)) return 1;
+	// TODO
 	return 0;
 }
 
