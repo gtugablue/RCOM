@@ -189,8 +189,6 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 	unsigned length;
 	if (byte_stuffing(frame->buffer, frame->length, &data, &length)) return 1;
 
-	if (write(fd, data, length) != length) return 1;
-
 	int i;
 	unsigned char bcc2;
 	if (length > 0)
@@ -202,24 +200,29 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 		}
 	}
 	else bcc2 = 0;
+	unsigned char *bcc2_stuffed;
+	unsigned length2;
+	if (byte_stuffing(&bcc2, sizeof(bcc2), &bcc2_stuffed, &length2)) return 1;
 
-	unsigned char ft[] = {bcc2,
+	unsigned char ft[] = {*bcc2_stuffed,
 			FLAG
 	};
 
 	if (write(fd, fh, sizeof(fh)) != sizeof(fh)) return 1;
 	if (write(fd, data, length) != length) return 1;
+	if (write(fd, bcc2_stuffed, length2) != length2) return 1;
 	if (write(fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
 
 	free(data);
+	free(bcc2_stuffed);
 	return 0;
 }
 
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length)
 {
-	unsigned char stuffed[2 * length];
+	unsigned char stuffed[2 * length]; // 2 * length is the size in the worst case
 	unsigned i;
-	unsigned j = 0;
+	unsigned j;
 	for (i = 0, j = 0; i < length; ++i, ++j)
 	{
 		if (src[i] == FLAG)
@@ -237,6 +240,21 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 	}
 	if ((*dst = malloc(j - 1)) == NULL) return 1;
 	memcpy(*dst, stuffed, j - 1);
+	return 0;
+}
+
+int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length)
+{
+	unsigned char destuffed[length];
+	unsigned i;
+	unsigned j;
+	for (i = 0, j = 0; i < length; ++i, ++j)
+	{
+		if(src[i] != ESC)
+			destuffed[j] = src[i];
+	}
+	if ((*dst = malloc(j - 1)) == NULL) return 1;
+	memcpy(*dst, destuffed, j - 1);
 	return 0;
 }
 
