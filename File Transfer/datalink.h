@@ -1,6 +1,8 @@
 #ifndef DATALINK_H
 #define DATALINK_H
 
+#include <stdlib.h>
+
 /*
  * Describe function return values
  */
@@ -30,24 +32,30 @@ const char MSG_UA_SIZE = 5;
 
 #define MAX_BUFFER_LENGTH 256
 
+typedef enum {
+	CMD_FRAME,
+	DATA_FRAME
+} frame_type_t;
+
 typedef struct {
 	unsigned char sequence_number;
 	unsigned length;
 	unsigned char *buffer;
-	int type;
+	unsigned char cmd;
+	frame_type_t type;
 } frame_t;
 
 /*
  * Describes the receiver state-machine states
  */
 typedef enum {START,
-				FLAG_RCV,
-				A_RCV,
-				C_RCV,
-				BCC1_RCV,
-				DATA_ESC_RCV,
-				DATA_RCV,
-				STOP} state_t;
+	FLAG_RCV,
+	A_RCV,
+	C_RCV,
+	BCC1_RCV,
+	DATA_ESC_RCV,
+	DATA_RCV,
+	STOP} state_t;
 
 /*
  * Define the program mode (either reader or writer)
@@ -68,7 +76,7 @@ typedef struct {
  * Starts the connection via serial-port, allowing for it to be either reader or writer
  * Returns port fd, -1 if error
  */
-int llopen(char *filename, int mode);
+int llopen(int porta, int mode);
 
 /*
  * Writes length bytes from buffer to fd
@@ -115,5 +123,4 @@ int write_message(int fd, char* msg, unsigned length);
  * Checks if stop flag is active or there are remaining tries, then writes the message again
  */
 void alarm_handler();
-
 #endif
