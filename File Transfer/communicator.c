@@ -8,9 +8,6 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	unsigned char teste[] = {1, 2};
-	printf("size: %d", sizeof(teste));
-
 	int vtime = 30;
 	int vmin = 0;
 	int serial_fd = serial_initialize(argv[1], vmin, vtime);
