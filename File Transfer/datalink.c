@@ -73,8 +73,6 @@ int read_byte(int fd, unsigned char *c)
 	return 0;
 }
 
-
-
 int llopen(int porta, int mode) {
 	char dev[50];
 	snprintf(dev, sizeof(dev), "/dev/ttyS%d", porta);
