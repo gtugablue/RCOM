@@ -8,6 +8,9 @@
 
 int send_cmd_frame(int fd, const frame_t *frame);
 int send_data_frame(int fd, const frame_t *frame);
+int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
+int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
+frame_t* get_frame(int fd);
 
 alarm_info_t alrm_info;
 void alarm_handler() {
@@ -201,9 +204,9 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length)
 {
-	unsigned char stuffed[2 * length];
+	unsigned char stuffed[2 * length]; // 2 * length is the size in the worst case
 	unsigned i;
-	unsigned j = 0;
+	unsigned j;
 	for (i = 0, j = 0; i < length; ++i, ++j)
 	{
 		if (src[i] == FLAG)
@@ -221,6 +224,21 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 	}
 	if ((*dst = malloc(j - 1)) == NULL) return 1;
 	memcpy(*dst, stuffed, j - 1);
+	return 0;
+}
+
+int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length)
+{
+	unsigned char destuffed[length];
+	unsigned i;
+	unsigned j;
+	for (i = 0, j = 0; i < length; ++i, ++j)
+	{
+		if(src[i] != ESC)
+			destuffed[j] = src[i];
+	}
+	if ((*dst = malloc(j - 1)) == NULL) return 1;
+	memcpy(*dst, destuffed, j - 1);
 	return 0;
 }
 
