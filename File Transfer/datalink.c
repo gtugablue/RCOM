@@ -5,10 +5,7 @@
 #include <signal.h>
 #include "datalink.h"
 #include "serial.h"
-#include "frame_validator.c"
-
-int send_cmd_frame(int fd, const frame_t *frame);
-int send_data_frame(int fd, const frame_t *frame);
+#include "frame_validator.h"
 
 alarm_info_t alrm_info;
 void alarm_handler() {
@@ -19,7 +16,10 @@ void alarm_handler() {
 
 	if(alrm_info.tries_left > 0) {
 		alrm_info.tries_left--;
-		write_message(alrm_info.fd, alrm_info.msg, alrm_info.msg_len);
+		if(send_frame(alrm_info.fd, alrm_info.frame)) {
+			printf("ERROR (alarm_handler): unable to send requested frame");
+			return;
+		}
 		alarm(alrm_info.time_dif);
 	} else if(alrm_info.stop != NULL && !(*alrm_info.stop)) {
 		if(kill(getpid(), SIGINT) != 0) {
@@ -29,32 +29,18 @@ void alarm_handler() {
 	}
 }
 
-int write_message(int fd, char* msg, unsigned length) {
+int write_timed_frame(alarm_info_t alrm_info_arg) {
 
-	if(write(fd, msg, length) != 1) {
-		printf("ERROR (write_message): could not write byte.");
+	if(alrm_info_arg.frame == NULL || alrm_info_arg.tries_left == 0 || alrm_info_arg.time_dif == 0) {
+		printf("ERROR (write_timed_frame): invalid alarm info parameters.");
 		return 1;
 	}
 
-	return 0;
-}
-
-int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif, unsigned int *stop_flag) {
-
-	if(msg == NULL || len == 0 || tries == 0 || time_dif == 0) {
-		return 1;
-	}
-
-	alrm_info.msg = msg;
-	alrm_info.tries_left = tries - 1;
-	alrm_info.time_dif = time_dif;
-	alrm_info.fd = fd;
-	alrm_info.msg_len = len;
-	alrm_info.stop = stop_flag;
+	alrm_info = alrm_info_arg;
 	signal(SIGALRM, alarm_handler);
-	if(write_message(fd, msg, len))
+	if(send_frame(alrm_info.fd, alrm_info.frame))
 		return 1;
-	alarm(time_dif);
+	alarm(alrm_info.time_dif);
 
 	return 0;
 }
@@ -70,8 +56,6 @@ int read_byte(int fd, unsigned char *c)
 	printf("Read 0x%X\n", + *c);
 	return 0;
 }
-
-
 
 int llopen(int porta, int mode) {
 	char dev[50];
@@ -99,29 +83,53 @@ int llopen(int porta, int mode) {
 }
 
 int llopen_transmitter(int fd) {
-	/*frame_t frame;
+	frame_t frame;
 	frame.sequence_number = 0;
-	frame.type = CMD_FRAME;*/
+	frame.length = 1;
+	frame.buffer = malloc(sizeof(char));
+	frame.buffer[0] = C_SET;
+	frame.type = CMD_FRAME;
+
+	if(send_frame(fd, &frame)) {
+		printf("ERROR (llopen_transmitter): unable to send SET.");
+		return 1;
+	}
+
+	frame_t *answer = get_frame(fd);
+	if(invalid_frame(&frame) || answer->buffer[2] != C_UA) {
+		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame");
+		return 1;
+	}
 
 	return 0;
 }
 
 int llopen_receiver(int fd) {
 
-	frame_t *frame = get_frame(fd);
+	int attempts = INIT_CONNECTION_TRIES;
 
-	// TODO do we need this?
-	/*if(valid_frame(frame)) {
-		printf("ERROR (llopen_receiver): invalid frame received.");
-		return 1;
-	}*/
+	while (attempts-- > 0) {
+		frame_t *frame = get_frame(fd);
 
-	if(valid_frame(frame)) {
-		printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame");
-		return 1;
+		if(invalid_frame(frame) || frame->buffer[2] != C_SET) {
+			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame");
+			return 1;
+		} else {
+			break;
+		}
 	}
 
-	// TODO respond with UA
+	frame_t answer;
+	answer.sequence_number = 0;
+	answer.length = 1;
+	answer.buffer = malloc(sizeof(char));
+	answer.buffer[0] = C_UA;
+	answer.type = CMD_FRAME;
+
+	if(send_frame(fd, &answer)) {
+		printf("ERROR (llopen_receiver): unable to answer sender's SET.");
+		return 1;
+	}
 
 	return 0;
 }
@@ -141,6 +149,18 @@ int llread(int fd, char * buffer) {
 
 int llclose(int fd) {
 	return 0;
+}
+
+int send_frame(int fd, const frame_t *frame) {
+	switch(frame->type) {
+	case CMD_FRAME:
+		return send_cmd_frame(fd, frame);
+	case DATA_FRAME:
+		return send_data_frame(fd, frame);
+	}
+
+	printf("ERROR (send_frame): invalid frame type received");
+	return 1;
 }
 
 int send_cmd_frame(int fd, const frame_t *frame)

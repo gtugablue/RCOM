@@ -21,8 +21,6 @@
 #define C_RR(R) (((R) << 5) | 1)
 #define C_REJ(R) (((R) << 5) | 5)
 
-const char MSG_CMD_LENGTH = 5;
-
 #define SET 0
 #define UA 1
 #define DATA 2
@@ -37,6 +35,9 @@ typedef enum {
 typedef struct {
 	unsigned char sequence_number;
 	unsigned length;
+	unsigned char bcc1;
+	unsigned char bcc2;
+	unsigned char address_field;
 	unsigned char *buffer;
 	frame_type_t type;
 } frame_t;
@@ -60,12 +61,13 @@ typedef enum {START,
 #define TRANSMITTER 0
 #define RECEIVER 1
 
+#define INIT_CONNECTION_TRIES 5
+
 typedef struct {
 	unsigned int fd;
 	unsigned int tries_left;
 	unsigned int time_dif;
-	unsigned int msg_len;
-	char *msg;
+	frame_t *frame;
 	unsigned int *stop;
 } alarm_info_t;
 
@@ -97,24 +99,11 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 
 /*
  * Writes given message a certain ammount of times with a delay between each of them, using alarms.
- * @param fd descriptor of file to write into
- * @param msg message to write
- * @param len length of the message
- * @param tries ammount of tries to be sent
- * @time_dif delay between messages
- * @stop_flag pointer to stop flag. If value pointed is >0, no more messages are to be written after the last written
+ * @param alrm_info_arg struct with alarm information
  * @return 0 if OK, > 0  otherwise
  */
-int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif, unsigned int *stop_flag);
-
-/*
- * Writes given message in the given file
- * @param fd descriptor of file to write into
- * @param msg message to write
- * @param len length of the message
- * @return 0 if OK, > 0 otherwise
- */
-int write_message(int fd, char* msg, unsigned length);
+int write_timed_frame(alarm_info_t alrm_info_arg);
+//int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif, unsigned int *stop_flag);
 
 /*
  * Checks if stop flag is active or there are remaining tries, then writes the message again
@@ -126,5 +115,11 @@ int llopen_transmitter(int fd);
 int llopen_receiver(int fd);
 
 frame_t* get_frame(int fd);
+
+int send_frame(int fd, const frame_t *frame);
+
+int send_cmd_frame(int fd, const frame_t *frame);
+
+int send_data_frame(int fd, const frame_t *frame);
 
 #endif
