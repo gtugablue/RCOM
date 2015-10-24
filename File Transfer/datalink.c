@@ -57,12 +57,10 @@ int read_byte(int fd, unsigned char *c)
 	return 0;
 }
 
-int llopen(int porta, int mode) {
-	char dev[50];
-	snprintf(dev, sizeof(dev), "/dev/ttyS%d", porta);
+int llopen(char *filename, int mode) {
 	int vtime = 30;
 	int vmin = 0;
-	int serial_fd = serial_initialize(dev, vmin, vtime);
+	int serial_fd = serial_initialize(filename, vmin, vtime);
 	if (serial_fd < 0) return -1;
 
 	switch(mode) {
