@@ -29,7 +29,7 @@ void alarm_handler() {
 		alarm(alrm_info.time_dif);
 	} else if(alrm_info.stop != NULL && !(*alrm_info.stop)) {
 		*(alrm_info.stop) = 2;
-		if(kill(getpid(), SIGINT) != 0) {
+		if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
 			printf("ERROR (alarm_handler): unable to send SIGINT signal.");
 			return;
 		}
@@ -55,13 +55,14 @@ int write_timed_frame(alarm_info_t *alrm_info_arg) {
 int read_byte(int fd, unsigned char *c)
 {
 	int res = read(fd,c,1);
-	if (res != 1)
+	/*if (res != 1)
 	{
 		printf("Error reading from the serial port.\n");
 		return 1;
-	}
-	printf("Read 0x%X\n", + *c);
-	return 0;
+	}*/
+	if(res == 1)
+		printf("Read 0x%X\n", + *c);
+	return res;
 }
 
 int llopen(char *filename, int mode) {
@@ -109,7 +110,7 @@ int llopen_transmitter(int fd) {
 	if(stop == 2) {
 		return 1;
 	}
-	if(invalid_frame(&frame) || answer->buffer[2] != C_UA) {
+	if(answer == NULL || invalid_frame(&frame) || answer->buffer[2] != C_UA) {
 		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame");
 		return 1;
 	}
@@ -125,7 +126,7 @@ int llopen_receiver(int fd) {
 	while (attempts-- > 0) {
 		frame_t *frame = get_frame(fd);
 
-		if(invalid_frame(frame) || frame->buffer[2] != C_SET) {
+		if(frame == NULL || invalid_frame(frame) || frame->buffer[2] != C_SET) {
 			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame");
 			return 1;
 		} else {
@@ -281,9 +282,8 @@ frame_t* get_frame(int fd) {
 
 	while(state != STOP) {
 		int ret = read_byte(fd, &byte);
-		if(ret != 0) {
-			perror("ERROR READING FROM SERIAL PORT\n");
-			exit(-1);
+		if(ret == 0) {
+			return NULL;
 		}
 
 		switch(state) {
