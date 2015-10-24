@@ -195,6 +195,7 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 	if (write(fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
 
 	free(data);
+	free(bcc2_stuffed);
 	return 0;
 }
 
