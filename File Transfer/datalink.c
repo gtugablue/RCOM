@@ -3,6 +3,49 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <signal.h>
+
+int write_message(int fd, char* msg, unsigned length) {
+
+	int i;
+	for(i = 0; i < length; i++) {
+		if(write(fd, msg + i, 1) != 1) {
+			printf("ERROR (write_message): could not write byte.");
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+unsigned int alrm_tries_left, alrm_time_dif, alrm_fd, alrm_msg_len;
+char *alrm_msg;
+void alarm_handler() {
+	if(alrm_tries_left > 0) {
+		alrm_tries_left--;
+		write_message(alrm_fd, alrm_msg, alrm_msg_len);
+		alarm(alrm_time_dif);
+	}
+}
+
+int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif) {
+
+	if(msg == NULL || len == 0 || tries == 0 || time_dif == 0) {
+		return 1;
+	}
+
+	alrm_msg = msg;
+	alrm_tries_left = tries - 1;
+	alrm_time_dif = time_dif;
+	alrm_fd = fd;
+	alrm_msg_len = len;
+	signal(SIGALRM, alarm_handler);
+	if(write_message(fd, msg, len))
+		return 1;
+	alarm(time_dif);
+
+	return 0;
+}
 
 int write_frame(int fd, const frame_t *frame);
 
@@ -180,9 +223,11 @@ frame_t* get_frame(int fd) {
 			} else {
 				frame->buffer[frame->length++] = byte;
 			}
+			break;
 		case DATA_RCV:
 			frame->buffer[frame->length++] = byte;
 			state = DATA_ESC_RCV;
+			break;
 		case STOP:
 			break;
 		}

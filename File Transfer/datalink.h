@@ -19,6 +19,11 @@
 #define C_RR(R) (((R) << 5) | 1)
 #define C_REJ(R) (((R) << 5) | 5)
 
+const char MSG_SET[] = { FLAG, A_TRANSMITTER, C_SET, A_TRANSMITTER ^ C_SET, FLAG };
+const char MSG_SET_SIZE = 5;
+const char MSG_UA[] = { FLAG, A_TRANSMITTER, C_UA, A_TRANSMITTER ^ C_UA, FLAG };
+const char MSG_UA_SIZE = 5;
+
 #define SET 0
 #define UA 1
 #define DATA 2
