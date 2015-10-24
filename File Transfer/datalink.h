@@ -21,6 +21,11 @@
 #define C_RR(R) (((R) << 5) | 1)
 #define C_REJ(R) (((R) << 5) | 5)
 
+const char MSG_SET[] = { FLAG, A_TRANSMITTER, C_SET, A_TRANSMITTER ^ C_SET, FLAG };
+const char MSG_SET_SIZE = 5;
+const char MSG_UA[] = { FLAG, A_TRANSMITTER, C_UA, A_TRANSMITTER ^ C_UA, FLAG };
+const char MSG_UA_SIZE = 5;
+
 #define SET 0
 #define UA 1
 #define DATA 2
@@ -83,5 +88,31 @@ typedef enum {START,
 	int llclose(int fd);
 
 	int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
+
+/*
+ * Writes given message a certain ammount of times with a delay between each of them, using alarms.
+ * @param fd descriptor of file to write into
+ * @param msg message to write
+ * @param len length of the message
+ * @param tries ammount of tries to be sent
+ * @time_dif delay between messages
+ * @stop_flag pointer to stop flag. If value pointed is >0, no more messages are to be written after the last written
+ * @return 0 if OK, > 0  otherwise
+ */
+int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif, unsigned int *stop_flag);
+
+/*
+ * Writes given message in the given file
+ * @param fd descriptor of file to write into
+ * @param msg message to write
+ * @param len length of the message
+ * @return 0 if OK, > 0 otherwise
+ */
+int write_message(int fd, char* msg, unsigned length);
+
+/*
+ * Checks if stop flag is active or there are remaining tries, then writes the message again
+ */
+void alarm_handler();
 
 #endif
