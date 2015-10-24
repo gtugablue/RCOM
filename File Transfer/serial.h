@@ -17,6 +17,9 @@
 #define MODEMDEVICE "/dev/ttyS1"
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 
+#define DEFAULT_VMIN 1
+#define DEFAULT_VTIME 30
+
 /*
  Open serial port device for reading and writing and not as controlling tty
  because we don't want to get killed if linenoise sends CTRL-C.

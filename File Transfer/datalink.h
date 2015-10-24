@@ -1,5 +1,5 @@
-#ifndef DATALINK_H
-#define DATALINK_H
+#ifndef __DATALINK_H
+#define __DATALINK_H
 
 #include <stdlib.h>
 
@@ -21,10 +21,7 @@
 #define C_RR(R) (((R) << 5) | 1)
 #define C_REJ(R) (((R) << 5) | 5)
 
-const char MSG_SET[] = { FLAG, A_TRANSMITTER, C_SET, A_TRANSMITTER ^ C_SET, FLAG };
-const char MSG_SET_SIZE = 5;
-const char MSG_UA[] = { FLAG, A_TRANSMITTER, C_UA, A_TRANSMITTER ^ C_UA, FLAG };
-const char MSG_UA_SIZE = 5;
+const char MSG_CMD_LENGTH = 5;
 
 #define SET 0
 #define UA 1
@@ -41,7 +38,6 @@ typedef struct {
 	unsigned char sequence_number;
 	unsigned length;
 	unsigned char *buffer;
-	unsigned char cmd;
 	frame_type_t type;
 } frame_t;
 
@@ -55,39 +51,49 @@ typedef enum {START,
 	BCC1_RCV,
 	DATA_ESC_RCV,
 	DATA_RCV,
-	STOP} state_t;
+	STOP
+} state_t;
 
-	/*
-	 * Define the program mode (either reader or writer)
-	 */
+/*
+ * Define the program mode (either reader or writer)
+ */
 #define TRANSMITTER 0
 #define RECEIVER 1
 
-	/*
-	 * Starts the connection via serial-port, allowing for it to be either reader or writer
-	 * Returns port fd, -1 if error
-	 */
-	int llopen(int porta, int mode);
+typedef struct {
+	unsigned int fd;
+	unsigned int tries_left;
+	unsigned int time_dif;
+	unsigned int msg_len;
+	char *msg;
+	unsigned int *stop;
+} alarm_info_t;
 
-	/*
-	 * Writes length bytes from buffer to fd
-	 * Return number of bytes written on success, -1 if error
-	 */
-	int llwrite(int fd, const unsigned char * buffer, int length);
+/*
+ * Starts the connection via serial-port, allowing for it to be either reader or writer
+ * Returns port fd, -1 if error
+ */
+int llopen(int porta, int mode);
 
-	/*
-	 * Reads from fd to buffer
-	 * Returns buffer size if ok, -1 if error
-	 */
-	int llread(int fd, char * buffer);
+/*
+ * Writes length bytes from buffer to fd
+ * Return number of bytes written on success, -1 if error
+ */
+int llwrite(int fd, const unsigned char * buffer, int length);
 
-	/*
-	 * Closes fd data link
-	 * Returns >0 if success, <0 on error
-	 */
-	int llclose(int fd);
+/*
+ * Reads from fd to buffer
+ * Returns buffer size if ok, -1 if error
+ */
+int llread(int fd, char * buffer);
 
-	int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
+/*
+ * Closes fd data link
+ * Returns >0 if success, <0 on error
+ */
+int llclose(int fd);
+
+int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 
 /*
  * Writes given message a certain ammount of times with a delay between each of them, using alarms.
@@ -114,5 +120,4 @@ int write_message(int fd, char* msg, unsigned length);
  * Checks if stop flag is active or there are remaining tries, then writes the message again
  */
 void alarm_handler();
-
 #endif
