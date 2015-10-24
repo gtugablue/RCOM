@@ -43,7 +43,7 @@ int valid_cmd_frame(frame_t *frame) {
 	if(i >= lim)
 		return 1;
 
-	if(frame->buffer[3] != a_field ^ c_field)
+	if(frame->buffer[3] != (a_field ^ c_field))
 		return 1;
 
 	return 0;

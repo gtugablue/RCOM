@@ -1,10 +1,11 @@
-#include "datalink.h"
-#include "serial.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include "datalink.h"
+#include "serial.h"
+#include "frame_validator.c"
 
 int send_cmd_frame(int fd, const frame_t *frame);
 int send_data_frame(int fd, const frame_t *frame);
@@ -98,9 +99,9 @@ int llopen(int porta, int mode) {
 }
 
 int llopen_transmitter(int fd) {
-	frame_t frame;
+	/*frame_t frame;
 	frame.sequence_number = 0;
-	frame.type = CMD_FRAME;
+	frame.type = CMD_FRAME;*/
 
 	return 0;
 }

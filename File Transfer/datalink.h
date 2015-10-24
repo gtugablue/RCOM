@@ -120,4 +120,11 @@ int write_message(int fd, char* msg, unsigned length);
  * Checks if stop flag is active or there are remaining tries, then writes the message again
  */
 void alarm_handler();
+
+int llopen_transmitter(int fd);
+
+int llopen_receiver(int fd);
+
+frame_t* get_frame(int fd);
+
 #endif
