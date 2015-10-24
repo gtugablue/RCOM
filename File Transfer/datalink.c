@@ -168,9 +168,7 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 
 	unsigned char *data;
 	unsigned length;
-	if (byte_stuffing(frame->buffer, frame->length, &data, &length)) return 1; // FIXME, BCC should also be stuffed
-
-	if (write(fd, data, length) != length) return 1;
+	if (byte_stuffing(frame->buffer, frame->length, &data, &length)) return 1;
 
 	int i;
 	unsigned char bcc2;
@@ -183,13 +181,17 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 		}
 	}
 	else bcc2 = 0;
+	unsigned char *bcc2_stuffed;
+	unsigned length2;
+	if (byte_stuffing(&bcc2, sizeof(bcc2), &bcc2_stuffed, &length2)) return 1;
 
-	unsigned char ft[] = {bcc2,
+	unsigned char ft[] = {bcc2_stuffed,
 			FLAG
 	};
 
 	if (write(fd, fh, sizeof(fh)) != sizeof(fh)) return 1;
 	if (write(fd, data, length) != length) return 1;
+	if (write(fd, bcc2_stuffed, length2) != length2) return 1;
 	if (write(fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
 
 	free(data);
