@@ -2,20 +2,16 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-<<<<<<< HEAD
 #include <signal.h>
+#include "datalink.h"
+#include "serial.h"
+#include "frame_validator.h"
 
 int send_cmd_frame(int fd, const frame_t *frame);
 int send_data_frame(int fd, const frame_t *frame);
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 frame_t* get_frame(int fd);
-=======
-#include <signal.h>
-#include "datalink.h"
-#include "serial.h"
-#include "frame_validator.h"
->>>>>>> refs/remotes/origin/master
 
 alarm_info_t alrm_info;
 void alarm_handler() {
@@ -32,21 +28,22 @@ void alarm_handler() {
 		}
 		alarm(alrm_info.time_dif);
 	} else if(alrm_info.stop != NULL && !(*alrm_info.stop)) {
-		if(kill(getpid(), SIGINT) != 0) {
+		*(alrm_info.stop) = 2;
+		if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
 			printf("ERROR (alarm_handler): unable to send SIGINT signal.");
 			return;
 		}
 	}
 }
 
-int write_timed_frame(alarm_info_t alrm_info_arg) {
+int write_timed_frame(alarm_info_t *alrm_info_arg) {
 
-	if(alrm_info_arg.frame == NULL || alrm_info_arg.tries_left == 0 || alrm_info_arg.time_dif == 0) {
+	if(alrm_info_arg->frame == NULL || alrm_info_arg->tries_left == 0 || alrm_info_arg->time_dif == 0) {
 		printf("ERROR (write_timed_frame): invalid alarm info parameters.");
 		return 1;
 	}
 
-	alrm_info = alrm_info_arg;
+	alrm_info = *alrm_info_arg;
 	signal(SIGALRM, alarm_handler);
 	if(send_frame(alrm_info.fd, alrm_info.frame))
 		return 1;
@@ -58,13 +55,14 @@ int write_timed_frame(alarm_info_t alrm_info_arg) {
 int read_byte(int fd, unsigned char *c)
 {
 	int res = read(fd,c,1);
-	if (res != 1)
+	/*if (res != 1)
 	{
 		printf("Error reading from the serial port.\n");
 		return 1;
-	}
-	printf("Read 0x%X\n", + *c);
-	return 0;
+	}*/
+	if(res == 1)
+		printf("Read 0x%X\n", + *c);
+	return res;
 }
 
 int llopen(char *filename, int mode) {
@@ -90,6 +88,24 @@ int llopen(char *filename, int mode) {
 	return serial_fd;
 }
 
+int llclose(int fd, int mode) {
+	switch(mode) {
+	case TRANSMITTER:
+		if(llclose_transmitter(fd))
+			return -1;
+		break;
+	case RECEIVER:
+		if(llclose_receiver(fd))
+			return -1;
+		break;
+	default:
+		printf("ERROR (llclose): invalid serial port opening mode.");
+		return -1;
+	}
+
+	return serial_terminate(fd);
+}
+
 int llopen_transmitter(int fd) {
 	frame_t frame;
 	frame.sequence_number = 0;
@@ -97,17 +113,27 @@ int llopen_transmitter(int fd) {
 	frame.buffer = malloc(sizeof(char));
 	frame.buffer[0] = C_SET;
 	frame.type = CMD_FRAME;
+	frame.address_field = A_TRANSMITTER;
 
-	if(send_frame(fd, &frame)) {
-		printf("ERROR (llopen_transmitter): unable to send SET.");
-		return 1;
-	}
+	unsigned int stop = 0;
+	alarm_info_t alarm_inf;
+	alarm_inf.fd = fd;
+	alarm_inf.tries_left = INIT_CONNECTION_TRIES;
+	alarm_inf.time_dif = INIT_CONNECTION_RESEND_TIME;
+	alarm_inf.frame = &frame;
+	alarm_inf.stop = &stop;
+
+	write_timed_frame(&alarm_inf);
 
 	frame_t *answer = get_frame(fd);
-	if(invalid_frame(&frame) || answer->buffer[2] != C_UA) {
+	if(stop == 2) {
+		return 1;
+	}
+	if(answer == NULL || invalid_frame(&frame) || answer->buffer[2] != C_UA) {
 		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame");
 		return 1;
 	}
+	stop = 1;
 
 	return 0;
 }
@@ -116,16 +142,19 @@ int llopen_receiver(int fd) {
 
 	int attempts = INIT_CONNECTION_TRIES;
 
-	while (attempts-- > 0) {
+	while (attempts > 0) {
 		frame_t *frame = get_frame(fd);
 
-		if(invalid_frame(frame) || frame->buffer[2] != C_SET) {
+		if(frame == NULL || invalid_frame(frame) || frame->buffer[2] != C_SET) {
 			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame");
-			return 1;
+			//return 1;
 		} else {
 			break;
 		}
+		--attempts;
 	}
+	if(attempts <= 0)
+		return 1;
 
 	frame_t answer;
 	answer.sequence_number = 0;
@@ -133,9 +162,90 @@ int llopen_receiver(int fd) {
 	answer.buffer = malloc(sizeof(char));
 	answer.buffer[0] = C_UA;
 	answer.type = CMD_FRAME;
+	answer.address_field = A_TRANSMITTER;
 
 	if(send_frame(fd, &answer)) {
 		printf("ERROR (llopen_receiver): unable to answer sender's SET.");
+		return 1;
+	}
+
+	return 0;
+}
+
+int llclose_transmitter(int fd) {
+
+	frame_t frame;
+	frame.sequence_number = 0;
+	frame.length = 1;
+	frame.buffer = malloc(sizeof(char));
+	frame.buffer[0] = C_DISC;
+	frame.type = CMD_FRAME;
+	frame.address_field = A_TRANSMITTER;
+
+	unsigned int stop = 0;
+	alarm_info_t alarm_inf;
+	alarm_inf.fd = fd;
+	alarm_inf.tries_left = FINAL_DISCONNECTION_TRIES;
+	alarm_inf.time_dif = FINAL_DISCONNECTION_RESEND_TIME;
+	alarm_inf.frame = &frame;
+	alarm_inf.stop = &stop;
+
+	write_timed_frame(&alarm_inf);
+
+	frame_t *answer = get_frame(fd);
+	if(stop == 2) {
+		return 1;
+	}
+	if(answer == NULL || invalid_frame(&frame) || answer->buffer[2] != C_DISC) {
+		printf("ERROR (llclose_transmitter): received invalid frame. Expected valid DISC command frame");
+		return 1;
+	}
+	stop = 1;
+
+	frame_t final_ua;
+	final_ua.sequence_number = 0;
+	final_ua.length = 1;
+	final_ua.buffer = malloc(sizeof(char));
+	final_ua.buffer[0] = C_UA;
+	final_ua.type = CMD_FRAME;
+	final_ua.address_field = A_TRANSMITTER;
+
+	if(send_frame(fd, &final_ua)) {
+		printf("ERROR (llclose_transmitter): unable to answer receiver's DISC.");
+		return 1;
+	}
+
+	return 0;
+}
+
+int llclose_receiver(int fd) {
+
+	int attempts = FINAL_DISCONNECTION_TRIES;
+
+	while (attempts > 0) {
+		frame_t *frame = get_frame(fd);
+
+		if(frame == NULL || invalid_frame(frame) || frame->buffer[2] != C_DISC) {
+			printf("ERROR (llclose_receiver): received invalid frame. Expected valid DISC command frame");
+			//return 1;
+		} else {
+			break;
+		}
+		--attempts;
+	}
+	if(attempts <= 0)
+		return 1;
+
+	frame_t answer;
+	answer.sequence_number = 0;
+	answer.length = 1;
+	answer.buffer = malloc(sizeof(char));
+	answer.buffer[0] = C_DISC;
+	answer.type = CMD_FRAME;
+	answer.address_field = A_TRANSMITTER;
+
+	if(send_frame(fd, &answer)) {
+		printf("ERROR (llclose_receiver): unable to answer sender's SET.");
 		return 1;
 	}
 
@@ -152,10 +262,6 @@ int llwrite(int fd, const unsigned char *buffer, int length) {
 }
 
 int llread(int fd, char * buffer) {
-	return 0;
-}
-
-int llclose(int fd) {
 	return 0;
 }
 
@@ -177,7 +283,7 @@ int send_cmd_frame(int fd, const frame_t *frame)
 		return 1;
 
 	unsigned char msg[] = {FLAG,
-			A_TRANSMITTER,
+			frame->address_field,
 			frame->buffer[0],
 			A_TRANSMITTER ^ frame->buffer[0],
 			FLAG};
@@ -214,7 +320,7 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 	unsigned length2;
 	if (byte_stuffing(&bcc2, sizeof(bcc2), &bcc2_stuffed, &length2)) return 1;
 
-	unsigned char ft[] = {bcc2_stuffed,
+	unsigned char ft[] = {*bcc2_stuffed,
 			FLAG
 	};
 
@@ -275,9 +381,8 @@ frame_t* get_frame(int fd) {
 
 	while(state != STOP) {
 		int ret = read_byte(fd, &byte);
-		if(ret != 0) {
-			perror("ERROR READING FROM SERIAL PORT\n");
-			exit(-1);
+		if(ret == 0) {
+			return NULL;
 		}
 
 		switch(state) {
