@@ -62,6 +62,7 @@ typedef enum {START,
 #define RECEIVER 1
 
 #define INIT_CONNECTION_TRIES 5
+#define INIT_CONNECTION_RESEND_TIME 1
 
 typedef struct {
 	unsigned int fd;
@@ -102,7 +103,7 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
  * @param alrm_info_arg struct with alarm information
  * @return 0 if OK, > 0  otherwise
  */
-int write_timed_frame(alarm_info_t alrm_info_arg);
+int write_timed_frame(alarm_info_t *alrm_info_arg);
 //int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif, unsigned int *stop_flag);
 
 /*
