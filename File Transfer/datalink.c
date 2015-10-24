@@ -88,6 +88,24 @@ int llopen(char *filename, int mode) {
 	return serial_fd;
 }
 
+int llclose(int fd, int mode) {
+	switch(mode) {
+	case TRANSMITTER:
+		if(llclose_transmitter(fd))
+			return -1;
+		break;
+	case RECEIVER:
+		if(llclose_receiver(fd))
+			return -1;
+		break;
+	default:
+		printf("ERROR (llopen): invalid serial port opening mode.");
+		return -1;
+	}
+
+	return serial_terminate(fd);
+}
+
 int llopen_transmitter(int fd) {
 	frame_t frame;
 	frame.sequence_number = 0;
@@ -149,6 +167,16 @@ int llopen_receiver(int fd) {
 	return 0;
 }
 
+int llclose_transmitter(int fd) {
+	// TODO
+	return 0;
+}
+
+int llclose_receiver(int fd) {
+	// TODO
+	return 0;
+}
+
 int llwrite(int fd, const unsigned char *buffer, int length) {
 	frame_t frame;
 	frame.sequence_number = 0;
@@ -159,10 +187,6 @@ int llwrite(int fd, const unsigned char *buffer, int length) {
 }
 
 int llread(int fd, char * buffer) {
-	return 0;
-}
-
-int llclose(int fd) {
 	return 0;
 }
 

@@ -46,7 +46,7 @@ int serial_initialize(char *serial_port, int vmin, int vtime) {
 int serial_terminate(int fd) {
 	if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
 		perror("tcsetattr");
-		return -1;
+		return 1;
 	}
 	return 0;
 }

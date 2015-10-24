@@ -94,7 +94,7 @@ int llread(int fd, char * buffer);
  * Closes fd data link
  * Returns >0 if success, <0 on error
  */
-int llclose(int fd);
+int llclose(int fd, int mode);
 
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 
@@ -114,6 +114,10 @@ void alarm_handler();
 int llopen_transmitter(int fd);
 
 int llopen_receiver(int fd);
+
+int llclose_transmitter(int fd);
+
+int llclose_receiver(int fd);
 
 frame_t* get_frame(int fd);
 
