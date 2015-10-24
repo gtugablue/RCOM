@@ -1,34 +1,35 @@
 #include "datalink.h"
+#include "serial.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
 
-unsigned int alrm_tries_left, alrm_time_dif, alrm_fd, alrm_msg_len;
-unsigned int *alrm_stop;
-char *alrm_msg;
+alarm_info_t alrm_info;
 void alarm_handler() {
-	if(alrm_stop != NULL && *alrm_stop) {
-		alrm_tries_left = 0;
+	if(alrm_info.stop != NULL && *alrm_info.stop) {
+		alrm_info.tries_left = 0;
 		return;
 	}
 
-	if(alrm_tries_left > 0) {
-		alrm_tries_left--;
-		write_message(alrm_fd, alrm_msg, alrm_msg_len);
-		alarm(alrm_time_dif);
+	if(alrm_info.tries_left > 0) {
+		alrm_info.tries_left--;
+		write_message(alrm_info.fd, alrm_info.msg, alrm_info.msg_len);
+		alarm(alrm_info.time_dif);
+	} else if(alrm_info.stop != NULL && !(*alrm_info.stop)) {
+		if(kill(getpid(), SIGINT) != 0) {
+			printf("ERROR (alarm_handler): unable to send SIGINT signal.");
+			return;
+		}
 	}
 }
 
 int write_message(int fd, char* msg, unsigned length) {
 
-	int i;
-	for(i = 0; i < length; i++) {
-		if(write(fd, msg + i, 1) != 1) {
-			printf("ERROR (write_message): could not write byte.");
-			return 1;
-		}
+	if(write(fd, msg, length) != 1) {
+		printf("ERROR (write_message): could not write byte.");
+		return 1;
 	}
 
 	return 0;
@@ -40,11 +41,12 @@ int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries,
 		return 1;
 	}
 
-	alrm_msg = msg;
-	alrm_tries_left = tries - 1;
-	alrm_time_dif = time_dif;
-	alrm_fd = fd;
-	alrm_msg_len = len;
+	alrm_info.msg = msg;
+	alrm_info.tries_left = tries - 1;
+	alrm_info.time_dif = time_dif;
+	alrm_info.fd = fd;
+	alrm_info.msg_len = len;
+	alrm_info.stop = stop_flag;
 	signal(SIGALRM, alarm_handler);
 	if(write_message(fd, msg, len))
 		return 1;
@@ -67,8 +69,51 @@ int read_byte(int fd, unsigned char *c)
 	return 0;
 }
 
-int llopen(int porta, int mode) {
+int llopen_transmitter(int fd) {
+
+
 	return 0;
+}
+
+int llopen_receiver(int fd) {
+
+	frame_t *frame = get_frame(fd);
+
+	// TODO do we need this?
+	/*if(valid_frame(frame)) {
+		printf("ERROR (llopen_receiver): invalid frame received.");
+		return 1;
+	}*/
+
+	if(frame->type == SET) {
+
+	}
+
+	return 0;
+}
+
+int llopen(char *filename, int mode) {
+
+	int serial_fd = serial_initialize(filename, DEFAULT_VMIN, DEFAULT_VTIME);
+
+	if(serial_fd <= 0)
+		return -1;
+
+	switch(mode) {
+	case TRANSMITTER:
+		if(llopen_transmitter(serial_fd))
+			return -1;
+		break;
+	case RECEIVER:
+		if(llopen_receiver(serial_fd))
+			return -1;
+		break;
+	default:
+		printf("ERROR (llopen): invalid serial port opening mode.");
+		return -1;
+	}
+
+	return serial_fd;
 }
 
 int llwrite(int fd, const unsigned char *buffer, int length) {

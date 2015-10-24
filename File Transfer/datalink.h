@@ -55,11 +55,20 @@ typedef enum {START,
 #define TRANSMITTER 0
 #define RECEIVER 1
 
+typedef struct {
+	unsigned int fd;
+	unsigned int tries_left;
+	unsigned int time_dif;
+	unsigned int msg_len;
+	char *msg;
+	unsigned int *stop;
+} alarm_info_t;
+
 /*
  * Starts the connection via serial-port, allowing for it to be either reader or writer
  * Returns port fd, -1 if error
  */
-int llopen(int porta, int mode);
+int llopen(char *filename, int mode);
 
 /*
  * Writes length bytes from buffer to fd
