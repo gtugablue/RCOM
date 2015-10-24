@@ -168,7 +168,7 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 
 	unsigned char *data;
 	unsigned length;
-	if (byte_stuffing(frame->buffer, frame->length, &data, &length)) return 1;
+	if (byte_stuffing(frame->buffer, frame->length, &data, &length)) return 1; // FIXME, BCC should also be stuffed
 
 	if (write(fd, data, length) != length) return 1;
 
