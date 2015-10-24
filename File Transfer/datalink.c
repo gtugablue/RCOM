@@ -5,6 +5,22 @@
 #include <string.h>
 #include <signal.h>
 
+unsigned int alrm_tries_left, alrm_time_dif, alrm_fd, alrm_msg_len;
+unsigned int *alrm_stop;
+char *alrm_msg;
+void alarm_handler() {
+	if(alrm_stop != NULL && *alrm_stop) {
+		alrm_tries_left = 0;
+		return;
+	}
+
+	if(alrm_tries_left > 0) {
+		alrm_tries_left--;
+		write_message(alrm_fd, alrm_msg, alrm_msg_len);
+		alarm(alrm_time_dif);
+	}
+}
+
 int write_message(int fd, char* msg, unsigned length) {
 
 	int i;
@@ -18,17 +34,7 @@ int write_message(int fd, char* msg, unsigned length) {
 	return 0;
 }
 
-unsigned int alrm_tries_left, alrm_time_dif, alrm_fd, alrm_msg_len;
-char *alrm_msg;
-void alarm_handler() {
-	if(alrm_tries_left > 0) {
-		alrm_tries_left--;
-		write_message(alrm_fd, alrm_msg, alrm_msg_len);
-		alarm(alrm_time_dif);
-	}
-}
-
-int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif) {
+int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif, unsigned int *stop_flag) {
 
 	if(msg == NULL || len == 0 || tries == 0 || time_dif == 0) {
 		return 1;

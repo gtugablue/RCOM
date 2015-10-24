@@ -81,4 +81,30 @@ int llclose(int fd);
 
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 
+/*
+ * Writes given message a certain ammount of times with a delay between each of them, using alarms.
+ * @param fd descriptor of file to write into
+ * @param msg message to write
+ * @param len length of the message
+ * @param tries ammount of tries to be sent
+ * @time_dif delay between messages
+ * @stop_flag pointer to stop flag. If value pointed is >0, no more messages are to be written after the last written
+ * @return 0 if OK, > 0  otherwise
+ */
+int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif, unsigned int *stop_flag);
+
+/*
+ * Writes given message in the given file
+ * @param fd descriptor of file to write into
+ * @param msg message to write
+ * @param len length of the message
+ * @return 0 if OK, > 0 otherwise
+ */
+int write_message(int fd, char* msg, unsigned length);
+
+/*
+ * Checks if stop flag is active or there are remaining tries, then writes the message again
+ */
+void alarm_handler();
+
 #endif
