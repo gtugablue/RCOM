@@ -277,7 +277,7 @@ int llclose_receiver(int fd) {
 		return 1;
 	}
 
-	printf("SENT UA");
+	printf("SENT DISC");
 
 	return 0;
 }
