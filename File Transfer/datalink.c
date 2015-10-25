@@ -73,8 +73,8 @@ int read_byte(int fd, unsigned char *c)
 	return res;
 }
 
-void datalink_init(datalink_t *datalink, int mode) {
-	datalink->mode = mode
+void datalink_init(datalink_t *datalink, unsigned int mode) {
+	datalink->mode = mode;
 	datalink->curr_seq_number = 0;
 	datalink->repeat = 0;
 	datalink->first_frame = 1;

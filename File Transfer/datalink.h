@@ -86,7 +86,7 @@ typedef struct {
 /*
  * Initializes all datalink parameters except fd(set to -1)
  */
-void datalink_init(datalink_t *datalink, int mode);
+void datalink_init(datalink_t *datalink, unsigned int mode);
 
 /*
  * Starts the connection via serial-port, allowing for it to be either reader or writer
