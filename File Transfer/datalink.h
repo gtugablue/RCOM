@@ -80,7 +80,13 @@ typedef struct {
 	int mode;
 	unsigned int curr_seq_number;
 	unsigned int repeat;
+	unsigned int first_frame;
 } datalink_t;
+
+/*
+ * Initializes all datalink parameters except fd(set to -1)
+ */
+void datalink_init(datalink_t *datalink, int mode);
 
 /*
  * Starts the connection via serial-port, allowing for it to be either reader or writer

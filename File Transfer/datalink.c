@@ -73,14 +73,20 @@ int read_byte(int fd, unsigned char *c)
 	return res;
 }
 
+void datalink_init(datalink_t *datalink, int mode) {
+	datalink->mode = mode
+	datalink->curr_seq_number = 0;
+	datalink->repeat = 0;
+	datalink->first_frame = 1;
+	datalink->fd = -1;
+}
+
 int llopen(char *filename, datalink_t *datalink) {
 	int vtime = 0;
 	int vmin = 1;
 	int serial_fd = serial_initialize(filename, vmin, vtime);
 	if (serial_fd < 0) return 1;
 	datalink->fd = serial_fd;
-	datalink->curr_seq_number = 0;
-	datalink->repeat = 0;
 
 	switch(datalink->mode) {
 	case SENDER:
