@@ -1,4 +1,5 @@
 #include "application.h"
+#include "datalink.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -32,19 +33,28 @@ typedef struct {
 
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet);
 
-/*int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
+int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
 	if (argc != 4)
 	{
 		printf("Usage: %s <port> <send|receive> <filename>\n", argv[0]);
 		return 1;
 	}
-
+	datalink_t datalink;
+	if(strcmp(argv[2], "send") == 0) {
+		datalink_init(&datalink, SENDER);
+		if (send_file(argv[1], argv[3])) return 1;
+	} else if(strcmp(argv[2], "RECEIVER") == 0) {
+		datalink_init(&datalink, RECEIVER);
+		llopen(argv[1], &datalink);
+		// TODO
+	}
 	return 0;
-}*/
+}
 
 int send_file(const char *port, const char *file_name)
 {
+
 	FILE *fp = fopen(file_name, "r");
 	fseek(fp, 0, SEEK_END);
 	unsigned long size = ftell(fp);
@@ -54,6 +64,7 @@ int send_file(const char *port, const char *file_name)
 	fclose(fp);
 
 	datalink_t datalink;
+	datalink.mode = SENDER;
 	if (llopen(port, &datalink)) return 1;
 
 	unsigned i;
