@@ -190,6 +190,8 @@ int llopen_receiver(int fd) {
 
 int llclose_transmitter(int fd) {
 
+	printf("\n\tCLOSING\n\n");
+
 	frame_t frame;
 	frame.sequence_number = 0;
 	frame.control_field = C_DISC;
@@ -206,6 +208,8 @@ int llclose_transmitter(int fd) {
 
 	write_timed_frame(&alarm_inf);
 
+	printf("SENT DISC\n");
+
 	frame_t answer;
 	if(get_frame(fd, &answer)) {
 		return 1;
@@ -219,6 +223,8 @@ int llclose_transmitter(int fd) {
 	}
 	stop = 1;
 
+	printf("GOT DISC\n");
+
 	frame_t final_ua;
 	final_ua.sequence_number = 0;
 	final_ua.control_field = C_UA;
@@ -230,10 +236,14 @@ int llclose_transmitter(int fd) {
 		return 1;
 	}
 
+	printf("CLOSED WELL\n");
+
 	return 0;
 }
 
 int llclose_receiver(int fd) {
+
+	printf("\n\tCLOSING\n\n");
 
 	int attempts = FINAL_DISCONNECTION_TRIES;
 
@@ -254,6 +264,8 @@ int llclose_receiver(int fd) {
 	if(attempts <= 0)
 		return 1;
 
+	printf("GOT DISC");
+
 	frame_t answer;
 	answer.sequence_number = 0;
 	answer.control_field = C_DISC;
@@ -264,6 +276,8 @@ int llclose_receiver(int fd) {
 		printf("ERROR (llclose_receiver): unable to answer sender's SET.\n");
 		return 1;
 	}
+
+	printf("SENT UA");
 
 	return 0;
 }
@@ -298,7 +312,7 @@ int send_cmd_frame(int fd, const frame_t *frame)
 	unsigned char msg[] = {FLAG,
 			frame->address_field,
 			frame->control_field,
-			A_TRANSMITTER ^ frame->control_field,
+			frame->address_field ^ frame->control_field,
 			FLAG};
 	if (write(fd, msg, sizeof(msg)) != sizeof(msg)) return 1;
 
