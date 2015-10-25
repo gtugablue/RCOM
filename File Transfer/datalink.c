@@ -388,6 +388,7 @@ frame_t* get_frame(int fd) {
 	state_t state = START;
 	unsigned char byte;
 	frame_t *frame = (frame_t *)malloc(sizeof(frame_t));
+	frame->buffer = malloc(sizeof(char) * 50);
 
 	while(state != STOP) {
 		int ret = read_byte(fd, &byte);
