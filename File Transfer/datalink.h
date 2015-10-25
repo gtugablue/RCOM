@@ -84,27 +84,27 @@ typedef struct {
 
 /*
  * Starts the connection via serial-port, allowing for it to be either reader or writer
- * Returns port fd, -1 if error
+ * Returns 0 if OK, > 0 otherwise
  */
-int llopen(char *filename, int mode);
+int llopen(char *filename, datalink_t *datalink);
 
 /*
  * Writes length bytes from buffer to fd
  * Return number of bytes written on success, -1 if error
  */
-int llwrite(int fd, const unsigned char * buffer, int length);
+int llwrite(datalink_t *datalink, const unsigned char *buffer, int length);
 
 /*
  * Reads from fd to buffer
  * Returns buffer size if ok, -1 if error
  */
-int llread(int fd, char * buffer);
+int llread(datalink_t *datalink, char * buffer);
 
 /*
  * Closes fd data link
  * Returns 0 if success, <0 on error
  */
-int llclose(int fd, int mode);
+int llclose(datalink_t *datalink);
 
 
 #endif

@@ -73,42 +73,45 @@ int read_byte(int fd, unsigned char *c)
 	return res;
 }
 
-int llopen(char *filename, int mode) {
+int llopen(char *filename, datalink_t *datalink) {
 	int vtime = 0;
 	int vmin = 1;
 	int serial_fd = serial_initialize(filename, vmin, vtime);
-	if (serial_fd < 0) return -1;
+	if (serial_fd < 0) return 1;
+	datalink->fd = serial_fd;
+	datalink->curr_seq_number = 0;
+	datalink->repeat = 0;
 
-	switch(mode) {
+	switch(datalink->mode) {
 	case SENDER:
 		if(llopen_transmitter(serial_fd))
-			return -1;
+			return 1;
 		break;
 	case RECEIVER:
 		if(llopen_receiver(serial_fd))
-			return -1;
+			return 1;
 		break;
 	default:
 		printf("ERROR (llopen): invalid serial port opening mode.\n");
-		return -1;
+		return 1;
 	}
 
-	return serial_fd;
+	return 0;
 }
 
-int llclose(int fd, int mode) {
-	switch(mode) {
+int llclose(datalink_t *datalink) {
+	switch(datalink->mode) {
 	case SENDER:
-		if(llclose_transmitter(fd))
-			return -1;
+		if(llclose_transmitter(datalink->fd))
+			return 1;
 		break;
 	case RECEIVER:
-		if(llclose_receiver(fd))
-			return -1;
+		if(llclose_receiver(datalink->fd))
+			return 1;
 		break;
 	default:
 		printf("ERROR (llclose): invalid serial port opening mode.");
-		return -1;
+		return 1;
 	}
 
 	return serial_terminate(fd);
@@ -257,7 +260,7 @@ int llclose_receiver(int fd) {
 	return 0;
 }
 
-int llwrite(int fd, const unsigned char *buffer, int length) {
+int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	frame_t frame;
 	frame.sequence_number = 0;
 	if ((frame.buffer = malloc(length)) == NULL) return 1;
@@ -266,7 +269,8 @@ int llwrite(int fd, const unsigned char *buffer, int length) {
 	return 0;
 }
 
-int llread(int fd, char * buffer) {
+int llread(datalink_t *datalink, char * buffer) {
+	// return number of bytes read, -1 if error
 	return 0;
 }
 
