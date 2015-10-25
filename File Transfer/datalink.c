@@ -153,7 +153,7 @@ int llopen_receiver(int fd) {
 
 		printf("Frame NULL %d\n", frame == NULL);
 		printf("Invalid frame %d\n", invalid_frame(frame));
-		printf("Frame buf %x\n", frame->buffer[0]);
+		//printf("Frame buf %x\n", frame->buffer[0]);
 
 		if(frame == NULL || invalid_frame(frame) || frame->buffer[0] != C_SET) {
 			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame\n");

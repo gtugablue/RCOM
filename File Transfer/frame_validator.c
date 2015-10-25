@@ -24,6 +24,8 @@ int invalid_data_frame(const frame_t *frame) {
 
 int invalid_cmd_frame(const frame_t *frame) {
 
+	printf("testing valid cmd\n");
+
 	if(frame->length != 1 || (frame->buffer[0] ^ frame->address_field) != frame->bcc1) {
 		return 1;
 	}
