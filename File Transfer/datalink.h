@@ -66,6 +66,7 @@ typedef enum {START,
 #define INIT_CONNECTION_RESEND_TIME 1
 #define FINAL_DISCONNECTION_TRIES 5
 #define FINAL_DISCONNECTION_RESEND_TIME 1
+#define LLREAD_DEFAULT_TRIES 5
 
 typedef struct {
 	int fd;
@@ -75,12 +76,24 @@ typedef struct {
 	unsigned int stop;
 } alarm_info_t;
 
+typedef enum {
+	FIRST,
+	MIDDLE,
+	LAST
+} frame_order_t;
+
 typedef struct {
 	int fd;
 	int mode;
 	unsigned int curr_seq_number;
 	unsigned int repeat;
+	frame_order_t frame_order;
 } datalink_t;
+
+/*
+ * Initializes all datalink parameters except fd(set to -1)
+ */
+void datalink_init(datalink_t *datalink, unsigned int mode);
 
 /*
  * Starts the connection via serial-port, allowing for it to be either reader or writer

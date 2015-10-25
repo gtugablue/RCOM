@@ -28,9 +28,9 @@ int main(int argc, char** argv)
 	datalink_t datalink;
 
 	if(strcmp(argv[2], "SENDER") == 0) {
-		datalink.mode = SENDER;
+		datalink_init(&datalink, SENDER);
 	} else if(strcmp(argv[2], "RECEIVER") == 0) {
-		datalink.mode = RECEIVER;
+		datalink_init(&datalink, RECEIVER);
 	}
 
 	llopen(argv[1], &datalink);

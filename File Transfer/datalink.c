@@ -20,6 +20,12 @@ int llopen_transmitter(int fd);
 int llopen_receiver(int fd);
 int llclose_transmitter(int fd);
 int llclose_receiver(int fd);
+int llread_first(datalink_t *datalink, char * buffer);
+int llread_middle(datalink_t *datalink, char * buffer);
+int llread_last(datalink_t *datalink, char * buffer);
+unsigned acknowledge_frame(datalink_t *datalink);
+unsigned get_data_frame(datalink_t *datalink, frame_t *frame);
+void inc_sequence_number(int *seq_num);
 
 alarm_info_t alrm_info;
 void alarm_handler() {
@@ -73,14 +79,20 @@ int read_byte(int fd, unsigned char *c)
 	return res;
 }
 
+void datalink_init(datalink_t *datalink, unsigned int mode) {
+	datalink->mode = mode;
+	datalink->curr_seq_number = 0;
+	datalink->repeat = 0;
+	datalink->frame_order = FIRST;
+	datalink->fd = -1;
+}
+
 int llopen(char *filename, datalink_t *datalink) {
 	int vtime = 0;
 	int vmin = 1;
 	int serial_fd = serial_initialize(filename, vmin, vtime);
 	if (serial_fd < 0) return 1;
 	datalink->fd = serial_fd;
-	datalink->curr_seq_number = 0;
-	datalink->repeat = 0;
 
 	switch(datalink->mode) {
 	case SENDER:
@@ -261,6 +273,7 @@ int llclose_receiver(int fd) {
 }
 
 int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
+
 	frame_t frame;
 	frame.sequence_number = 0;
 	if ((frame.buffer = malloc(length)) == NULL) return 1;
@@ -270,7 +283,56 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 }
 
 int llread(datalink_t *datalink, char * buffer) {
-	// return number of bytes read, -1 if error
+
+	switch(datalink->frame_order) {
+	case FIRST:
+		return llread_first(datalink, buffer);
+		break;
+	case MIDDLE:
+		return llread_middle(datalink, buffer);
+		break;
+	case LAST:
+		return llread_last(datalink, buffer);
+		break;
+	}
+
+	return -1;
+}
+
+int llread_first(datalink_t *datalink, char * buffer) {
+	frame_t frame;
+	if(get_data_frame(datalink, &frame)) {
+		return -1;
+	}
+	memcpy(buffer, frame.buffer, frame.length);
+	return frame.length;
+}
+
+int llread_middle(datalink_t *datalink, char * buffer) {
+	if(acknowledge_frame(datalink))
+		return -1;
+	frame_t frame;
+	if(get_data_frame(datalink, &frame)) {
+		return -1;
+	}
+
+	memcpy(buffer, frame.buffer, frame.length);
+	return frame.length;
+}
+
+int llread_last(datalink_t *datalink, char * buffer) {
+	if(acknowledge_frame(datalink))
+		return -1;
+	return 0;
+}
+
+unsigned acknowledge_frame(datalink_t *datalink) {
+	// TODO acknowledge current frame if not to repeat
+	return 0;
+}
+
+unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
+	// TODO get a frame with some tries and attention to global stop for alarms
 	return 0;
 }
 
@@ -338,6 +400,10 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 	free(data);
 	free(bcc2_stuffed);
 	return 0;
+}
+
+void inc_sequence_number(int *seq_num) {
+	*seq_num = (*seq_num + 1)%2;
 }
 
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length)
