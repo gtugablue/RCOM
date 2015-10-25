@@ -23,14 +23,14 @@ void alarm_handler() {
 	if(alrm_info.tries_left > 0) {
 		alrm_info.tries_left--;
 		if(send_frame(alrm_info.fd, alrm_info.frame)) {
-			printf("ERROR (alarm_handler): unable to send requested frame");
+			printf("ERROR (alarm_handler): unable to send requested frame\n");
 			return;
 		}
 		alarm(alrm_info.time_dif);
 	} else if(alrm_info.stop != NULL && !(*alrm_info.stop)) {
 		*(alrm_info.stop) = 2;
 		if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
-			printf("ERROR (alarm_handler): unable to send SIGINT signal.");
+			printf("ERROR (alarm_handler): unable to send SIGINT signal.\n");
 			return;
 		}
 	}
@@ -39,7 +39,7 @@ void alarm_handler() {
 int write_timed_frame(alarm_info_t *alrm_info_arg) {
 
 	if(alrm_info_arg->frame == NULL || alrm_info_arg->tries_left == 0 || alrm_info_arg->time_dif == 0) {
-		printf("ERROR (write_timed_frame): invalid alarm info parameters.");
+		printf("ERROR (write_timed_frame): invalid alarm info parameters.\n");
 		return 1;
 	}
 
@@ -81,7 +81,7 @@ int llopen(char *filename, int mode) {
 			return -1;
 		break;
 	default:
-		printf("ERROR (llopen): invalid serial port opening mode.");
+		printf("ERROR (llopen): invalid serial port opening mode.\n");
 		return -1;
 	}
 
@@ -107,6 +107,9 @@ int llclose(int fd, int mode) {
 }
 
 int llopen_transmitter(int fd) {
+
+	printf("Starting transmitter\n");
+
 	frame_t frame;
 	frame.sequence_number = 0;
 	frame.length = 1;
@@ -130,7 +133,7 @@ int llopen_transmitter(int fd) {
 		return 1;
 	}
 	if(answer == NULL || invalid_frame(&frame) || answer->buffer[2] != C_UA) {
-		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame");
+		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame\n");
 		return 1;
 	}
 	stop = 1;
@@ -140,13 +143,15 @@ int llopen_transmitter(int fd) {
 
 int llopen_receiver(int fd) {
 
+	printf("Starting receiver\n");
+
 	int attempts = INIT_CONNECTION_TRIES;
 
 	while (attempts > 0) {
 		frame_t *frame = get_frame(fd);
 
 		if(frame == NULL || invalid_frame(frame) || frame->buffer[2] != C_SET) {
-			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame");
+			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame\n");
 			//return 1;
 		} else {
 			break;
@@ -165,7 +170,7 @@ int llopen_receiver(int fd) {
 	answer.address_field = A_TRANSMITTER;
 
 	if(send_frame(fd, &answer)) {
-		printf("ERROR (llopen_receiver): unable to answer sender's SET.");
+		printf("ERROR (llopen_receiver): unable to answer sender's SET.\n");
 		return 1;
 	}
 
@@ -197,7 +202,7 @@ int llclose_transmitter(int fd) {
 		return 1;
 	}
 	if(answer == NULL || invalid_frame(&frame) || answer->buffer[2] != C_DISC) {
-		printf("ERROR (llclose_transmitter): received invalid frame. Expected valid DISC command frame");
+		printf("ERROR (llclose_transmitter): received invalid frame. Expected valid DISC command frame.\n");
 		return 1;
 	}
 	stop = 1;
@@ -211,7 +216,7 @@ int llclose_transmitter(int fd) {
 	final_ua.address_field = A_TRANSMITTER;
 
 	if(send_frame(fd, &final_ua)) {
-		printf("ERROR (llclose_transmitter): unable to answer receiver's DISC.");
+		printf("ERROR (llclose_transmitter): unable to answer receiver's DISC.\n");
 		return 1;
 	}
 
@@ -226,7 +231,7 @@ int llclose_receiver(int fd) {
 		frame_t *frame = get_frame(fd);
 
 		if(frame == NULL || invalid_frame(frame) || frame->buffer[2] != C_DISC) {
-			printf("ERROR (llclose_receiver): received invalid frame. Expected valid DISC command frame");
+			printf("ERROR (llclose_receiver): received invalid frame. Expected valid DISC command frame.\n");
 			//return 1;
 		} else {
 			break;
@@ -245,7 +250,7 @@ int llclose_receiver(int fd) {
 	answer.address_field = A_TRANSMITTER;
 
 	if(send_frame(fd, &answer)) {
-		printf("ERROR (llclose_receiver): unable to answer sender's SET.");
+		printf("ERROR (llclose_receiver): unable to answer sender's SET.\n");
 		return 1;
 	}
 
@@ -273,7 +278,7 @@ int send_frame(int fd, const frame_t *frame) {
 		return send_data_frame(fd, frame);
 	}
 
-	printf("ERROR (send_frame): invalid frame type received");
+	printf("ERROR (send_frame): invalid frame type received.\n");
 	return 1;
 }
 

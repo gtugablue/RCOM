@@ -4,6 +4,10 @@
 
 int main(int argc, char** argv)
 {
+	if(argc != 2) {
+		printf("INVALID ARGS");
+		return 1;
+	}
 	/*if ( (argc < 2) || ((strcmp("/dev/ttyS0", argv[1])!=0) && (strcmp("/dev/ttyS4", argv[1])!=0) )) {
 		printf("Usage:\tcommunicator SerialPort\n\tcentral: /dev/ttyS4\tTUX: /dev/ttyS0\n");
 		exit(1);
@@ -19,9 +23,9 @@ int main(int argc, char** argv)
 
 	//serial_terminate(serial_fd);
 
-	if(strcmp(argv[1], "TRANSMITTER")) {
+	if(strcmp(argv[1], "TRANSMITTER") == 0) {
 		/*int fd = */llopen("/dev/ttyS0", TRANSMITTER);
-	} else if(strcmp(argv[1], "RECEIVER")) {
+	} else if(strcmp(argv[1], "RECEIVER") == 0) {
 		/*int fd = */llopen("/dev/ttyS0", RECEIVER);
 	}
 
