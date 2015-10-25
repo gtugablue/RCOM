@@ -13,7 +13,7 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 int get_frame(int fd, frame_t *frame);
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
-int write_timed_frame(alarm_info_t *alrm_info_arg);
+int write_timed_frame();
 void alarm_handler();
 int send_frame(int fd, const frame_t *frame);
 int llopen_transmitter(int fd);
@@ -23,7 +23,7 @@ int llclose_receiver(int fd);
 
 alarm_info_t alrm_info;
 void alarm_handler() {
-	if(alrm_info.stop != NULL && *alrm_info.stop) {
+	if(alrm_info.stop) {
 		alrm_info.tries_left = 0;
 		return;
 	}
@@ -35,8 +35,8 @@ void alarm_handler() {
 			return;
 		}
 		alarm(alrm_info.time_dif);
-	} else if(alrm_info.stop != NULL && !(*alrm_info.stop)) {
-		*(alrm_info.stop) = 2;
+	} else if(alrm_info.stop) {
+		alrm_info.stop = 2;
 		if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
 			printf("ERROR (alarm_handler): unable to send SIGINT signal.\n");
 			return;
@@ -44,14 +44,13 @@ void alarm_handler() {
 	}
 }
 
-int write_timed_frame(alarm_info_t *alrm_info_arg) {
+int write_timed_frame() {
 
-	if(alrm_info_arg->frame == NULL || alrm_info_arg->tries_left == 0 || alrm_info_arg->time_dif == 0) {
+	if(alrm_info.frame == NULL || alrm_info.tries_left == 0 || alrm_info.time_dif == 0) {
 		printf("ERROR (write_timed_frame): invalid alarm info parameters.\n");
 		return 1;
 	}
 
-	alrm_info = *alrm_info_arg;
 	signal(SIGALRM, alarm_handler);
 	if(send_frame(alrm_info.fd, alrm_info.frame))
 		return 1;
@@ -116,44 +115,37 @@ int llclose(int fd, int mode) {
 }
 
 int llopen_transmitter(int fd) {
-
-	printf("Starting transmitter\n");
-
 	frame_t frame;
 	frame.sequence_number = 0;
 	frame.control_field = C_SET;
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	unsigned int stop = 0;
-	alarm_info_t alarm_inf;
-	alarm_inf.fd = fd;
-	alarm_inf.tries_left = INIT_CONNECTION_TRIES;
-	alarm_inf.time_dif = INIT_CONNECTION_RESEND_TIME;
-	alarm_inf.frame = &frame;
-	alarm_inf.stop = &stop;
+	alrm_info.fd = fd;
+	alrm_info.tries_left = INIT_CONNECTION_TRIES;
+	alrm_info.time_dif = INIT_CONNECTION_RESEND_TIME;
+	alrm_info.frame = &frame;
+	alrm_info.stop = 0;
 
-	write_timed_frame(&alarm_inf);
+	write_timed_frame();
 
 	frame_t answer;
 	if(get_frame(fd, &answer)) {
 		return 1;
 	}
-	if(stop == 2) {
+	if(alrm_info.stop == 2) {
 		return 1;
 	}
 	if(invalid_frame(&answer) || answer.control_field != C_UA) {
 		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame\n");
 		return 1;
 	}
-	stop = 1;
+	alrm_info.stop = 1;
 
 	return 0;
 }
 
 int llopen_receiver(int fd) {
-
-	printf("Starting receiver\n");
 
 	int attempts = INIT_CONNECTION_TRIES;
 
@@ -189,41 +181,32 @@ int llopen_receiver(int fd) {
 }
 
 int llclose_transmitter(int fd) {
-
-	printf("\n\tCLOSING\n\n");
-
 	frame_t frame;
 	frame.sequence_number = 0;
 	frame.control_field = C_DISC;
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	unsigned int stop = 0;
-	alarm_info_t alarm_inf;
-	alarm_inf.fd = fd;
-	alarm_inf.tries_left = FINAL_DISCONNECTION_TRIES;
-	alarm_inf.time_dif = FINAL_DISCONNECTION_RESEND_TIME;
-	alarm_inf.frame = &frame;
-	alarm_inf.stop = &stop;
+	alrm_info.fd = fd;
+	alrm_info.tries_left = FINAL_DISCONNECTION_TRIES;
+	alrm_info.time_dif = FINAL_DISCONNECTION_RESEND_TIME;
+	alrm_info.frame = &frame;
+	alrm_info.stop = 0;
 
-	write_timed_frame(&alarm_inf);
-
-	printf("SENT DISC\n");
+	write_timed_frame();
 
 	frame_t answer;
 	if(get_frame(fd, &answer)) {
 		return 1;
 	}
-	if(stop == 2) {
+	if(alrm_info.stop == 2) {
 		return 1;
 	}
 	if(invalid_frame(&answer) || answer.control_field != C_DISC) {
 		printf("ERROR (llclose_transmitter): received invalid frame. Expected valid DISC command frame.\n");
 		return 1;
 	}
-	stop = 1;
-
-	printf("GOT DISC\n");
+	alrm_info.stop = 1;
 
 	frame_t final_ua;
 	final_ua.sequence_number = 0;
@@ -236,14 +219,10 @@ int llclose_transmitter(int fd) {
 		return 1;
 	}
 
-	printf("CLOSED WELL\n");
-
 	return 0;
 }
 
 int llclose_receiver(int fd) {
-
-	printf("\n\tCLOSING\n\n");
 
 	int attempts = FINAL_DISCONNECTION_TRIES;
 
@@ -264,8 +243,6 @@ int llclose_receiver(int fd) {
 	if(attempts <= 0)
 		return 1;
 
-	printf("GOT DISC");
-
 	frame_t answer;
 	answer.sequence_number = 0;
 	answer.control_field = C_DISC;
@@ -276,8 +253,6 @@ int llclose_receiver(int fd) {
 		printf("ERROR (llclose_receiver): unable to answer sender's SET.\n");
 		return 1;
 	}
-
-	printf("SENT UA");
 
 	return 0;
 }

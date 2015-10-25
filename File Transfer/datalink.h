@@ -72,7 +72,7 @@ typedef struct {
 	unsigned int tries_left;
 	unsigned int time_dif;
 	frame_t *frame;
-	unsigned int *stop;
+	unsigned int stop;
 } alarm_info_t;
 
 /*
