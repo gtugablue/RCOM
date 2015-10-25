@@ -1,6 +1,7 @@
 #include "application.h"
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #define MAX(A, B) (((A) > (B)) ? (A) : (B))
 
@@ -29,9 +30,9 @@ typedef struct {
 	control_packet_param_t *params;
 } control_packet_t;
 
-int send_data_packet(int fd, const data_packet_t *data_packet);
+int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet);
 
-int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
+/*int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
 	if (argc != 4)
 	{
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 	}
 
 	return 0;
-}
+}*/
 
 int send_file(const char *port, const char *file_name)
 {
@@ -52,8 +53,8 @@ int send_file(const char *port, const char *file_name)
 	fread(data, size, 1, fp);
 	fclose(fp);
 
-	int fd = llopen(port, SENDER);
-	if (fd < 0) return 1;
+	datalink_t datalink;
+	if (llopen(port, &datalink)) return 1;
 
 	unsigned i;
 	for (i = 0; i < size; i += MAX_PACKET_SIZE)
@@ -63,26 +64,28 @@ int send_file(const char *port, const char *file_name)
 		data_packet.sn = i;
 		data_packet.length = MAX(MAX_PACKET_SIZE, size - i);
 		data_packet.data = &data[i];
-		if (send_data_packet(fd, &data_packet)) return 1;
+		if (send_data_packet(&datalink, &data_packet)) return 1;
 	}
 
-	return llclose(fd, SENDER);
+	return llclose(&datalink);
 }
 
-int send_data_packet(int fd, const data_packet_t *data_packet)
+int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 {
 	unsigned size = data_packet->length + 4;
 	unsigned char packet[size];
-	packet[0] = data_packet->control_field;
+	packet[0] = data_packet->ctrl_field;
 	packet[1] = data_packet->sn;
-	packet[2] = data_packet->length & 0xFF00;
-	packet[3] = data_packet->length & 0x00FF;
-	memcpy(&packet[4], data_packet->data, length);
-	//if (llwrite(fd, packet, size) < 0) return 1;
+	packet[2] = (uint8_t)((data_packet->length & 0xFF00) >> 8);
+	packet[3] = (uint8_t)(data_packet->length & 0x00FF);
+	memcpy(&packet[4], data_packet->data, size);
+	//if (llwrite(datalink, packet, size) < 0) return 1;
 	printf("Cenas: %s\n", packet);
+
+	return 0;
 }
 
 int receive_file(const char *port, const char *destination_folder)
 {
-
+	return 0;
 }

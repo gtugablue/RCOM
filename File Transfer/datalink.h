@@ -101,7 +101,7 @@ void datalink_init(datalink_t *datalink, unsigned int mode);
  * Starts the connection via serial-port, allowing for it to be either reader or writer
  * Returns 0 if OK, > 0 otherwise
  */
-int llopen(char *filename, datalink_t *datalink);
+int llopen(const char *filename, datalink_t *datalink);
 
 /*
  * Writes length bytes from buffer to fd

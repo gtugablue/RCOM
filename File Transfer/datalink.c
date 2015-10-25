@@ -87,7 +87,7 @@ void datalink_init(datalink_t *datalink, unsigned int mode) {
 	datalink->fd = -1;
 }
 
-int llopen(char *filename, datalink_t *datalink) {
+int llopen(const char *filename, datalink_t *datalink) {
 	int vtime = 0;
 	int vmin = 1;
 	int serial_fd = serial_initialize(filename, vmin, vtime);
