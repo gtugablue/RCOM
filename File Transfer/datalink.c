@@ -274,10 +274,10 @@ int llclose_receiver(int fd) {
 }
 
 int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
-
 	frame_t frame;
 	frame.sequence_number = datalink->curr_seq_number;
 	if ((frame.buffer = malloc(length)) == NULL) return 1;
+	frame.length = length;
 	memcpy(frame.buffer, buffer, length);
 	if (send_data_frame(datalink->fd, &frame)) return 1;
 	return 0;
@@ -439,12 +439,10 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 	unsigned char ft[] = {*bcc2_stuffed,
 			FLAG
 	};
-
 	if (write(fd, fh, sizeof(fh)) != sizeof(fh)) return 1;
 	if (write(fd, data, length) != length) return 1;
 	if (write(fd, bcc2_stuffed, length2) != length2) return 1;
 	if (write(fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
-
 	free(data);
 	free(bcc2_stuffed);
 	return 0;
@@ -474,8 +472,9 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 		else
 			stuffed[j] = src[i];
 	}
-	if ((*dst = malloc(j - 1)) == NULL) return 1;
-	memcpy(*dst, stuffed, j - 1);
+	*new_length = j - 1;
+	if ((*dst = malloc(*new_length)) == NULL) return 1;
+	memcpy(*dst, stuffed, *new_length);
 	return 0;
 }
 
@@ -489,8 +488,9 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 		if(src[i] != ESC)
 			destuffed[j] = src[i];
 	}
-	if ((*dst = malloc(j - 1)) == NULL) return 1;
-	memcpy(*dst, destuffed, j - 1);
+	*new_length = j - 1;
+	if ((*dst = malloc(*new_length)) == NULL) return 1;
+	memcpy(*dst, destuffed, *new_length);
 	return 0;
 }
 
