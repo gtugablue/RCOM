@@ -25,7 +25,7 @@ int llread_middle(datalink_t *datalink, char * buffer);
 int llread_last(datalink_t *datalink, char * buffer);
 unsigned acknowledge_frame(datalink_t *datalink);
 unsigned get_data_frame(datalink_t *datalink, frame_t *frame);
-void inc_sequence_number(int *seq_num);
+void inc_sequence_number(unsigned int *seq_num);
 
 alarm_info_t alrm_info;
 void alarm_handler() {
@@ -351,13 +351,13 @@ unsigned acknowledge_frame(datalink_t *datalink) {
 unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
 	int tries = LLREAD_VALIDMSG_TRIES;
 	while(tries-- > 0) {
-		if(get_frame(datalink->fd, &frame)) {
+		if(get_frame(datalink->fd, frame)) {
 			return 1;
 		}
 		if(alrm_info.stop == 2) {
 			return 1;
 		}
-		if(invalid_frame(&frame)) {
+		if(invalid_frame(frame)) {
 			printf("ERROR (get_data_frame): received invalid frame. Expected valid DATA frame\n");
 			return 1;
 		}
@@ -437,7 +437,7 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 	return 0;
 }
 
-void inc_sequence_number(int *seq_num) {
+void inc_sequence_number(unsigned int *seq_num) {
 	*seq_num = (*seq_num + 1)%2;
 }
 
