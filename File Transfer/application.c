@@ -5,6 +5,7 @@
 #include <string.h>
 
 #define MAX(A, B) (((A) > (B)) ? (A) : (B))
+#define MIN(A, B) (((A) < (B)) ? (A) : (B))
 
 typedef enum {
 	PACKET_CTRL_FIELD_DATA = 0,
@@ -44,7 +45,7 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 	if(strcmp(argv[2], "send") == 0) {
 		datalink_init(&datalink, SENDER);
 		if (send_file(argv[1], argv[3])) return 1;
-	} else if(strcmp(argv[2], "RECEIVER") == 0) {
+	} else if(strcmp(argv[2], "receiver") == 0) {
 		datalink_init(&datalink, RECEIVER);
 		llopen(argv[1], &datalink);
 		// TODO
@@ -73,7 +74,7 @@ int send_file(const char *port, const char *file_name)
 		data_packet_t data_packet;
 		data_packet.ctrl_field = PACKET_CTRL_FIELD_DATA;
 		data_packet.sn = i;
-		data_packet.length = MAX(MAX_PACKET_SIZE, size - i);
+		data_packet.length = MIN(MAX_PACKET_SIZE, size - i);
 		data_packet.data = &data[i];
 		if (send_data_packet(&datalink, &data_packet)) return 1;
 	}
@@ -90,8 +91,7 @@ int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 	packet[2] = (uint8_t)((data_packet->length & 0xFF00) >> 8);
 	packet[3] = (uint8_t)(data_packet->length & 0x00FF);
 	memcpy(&packet[4], data_packet->data, size);
-	//if (llwrite(datalink, packet, size) < 0) return 1;
-	printf("Cenas: %s\n", packet);
+	if (llwrite(datalink, packet, size) < 0) return 1;
 
 	return 0;
 }
