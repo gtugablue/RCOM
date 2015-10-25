@@ -60,7 +60,8 @@ int read_byte(int fd, unsigned char *c)
 		printf("Error reading from the serial port.\n");
 		return 1;
 	}*/
-	if(res == 1)
+	printf("Read %d bytes\n", res);
+	if(res >= 1)
 		printf("Read 0x%X\n", + *c);
 	return res;
 }
@@ -132,7 +133,7 @@ int llopen_transmitter(int fd) {
 	if(stop == 2) {
 		return 1;
 	}
-	if(answer == NULL || invalid_frame(&frame) || answer->buffer[2] != C_UA) {
+	if(answer == NULL || invalid_frame(&frame) || answer->buffer[0] != C_UA) {
 		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame\n");
 		return 1;
 	}
@@ -150,7 +151,11 @@ int llopen_receiver(int fd) {
 	while (attempts > 0) {
 		frame_t *frame = get_frame(fd);
 
-		if(frame == NULL || invalid_frame(frame) || frame->buffer[2] != C_SET) {
+		printf("Frame NULL %d\n", frame == NULL);
+		printf("Invalid frame %d\n", invalid_frame(frame));
+		printf("Frame buf %x\n", frame->buffer[0]);
+
+		if(frame == NULL || invalid_frame(frame) || frame->buffer[0] != C_SET) {
 			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame\n");
 			//return 1;
 		} else {
