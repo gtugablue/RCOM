@@ -26,15 +26,17 @@ int main(int argc, char** argv)
 
 	//serial_terminate(serial_fd);
 
+	datalink_t datalink;
+
 	if(strcmp(argv[2], "SENDER") == 0) {
-		int fd = llopen(argv[1], SENDER);
-		sleep(1);
-		llclose(fd, SENDER);
+		datalink_init(&datalink, SENDER);
 	} else if(strcmp(argv[2], "RECEIVER") == 0) {
-		int fd = llopen(argv[1], RECEIVER);
-		sleep(1);
-		llclose(fd, RECEIVER);
+		datalink_init(&datalink, RECEIVER);
 	}
+
+	llopen(argv[1], &datalink);
+	sleep(1);
+	llclose(&datalink);
 
 	return 0;
 }
