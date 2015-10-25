@@ -34,11 +34,12 @@ typedef enum {
 
 typedef struct {
 	unsigned char sequence_number;
-	unsigned length;
-	unsigned char bcc1;
-	unsigned char bcc2;
 	unsigned char address_field;
+	unsigned char control_field;
+	unsigned char bcc1;
+	unsigned length;
 	unsigned char *buffer;
+	unsigned char bcc2;
 	frame_type_t type;
 } frame_t;
 
