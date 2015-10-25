@@ -59,8 +59,10 @@ int write_timed_frame() {
 	}
 
 	signal(SIGALRM, alarm_handler);
-	if(send_frame(alrm_info.fd, alrm_info.frame))
+	if(send_frame(alrm_info.fd, alrm_info.frame)) {
+		printf("ERROR (write_timed_frame): send_frame failed.\n");
 		return 1;
+	}
 	alarm(alrm_info.time_dif);
 
 	return 0;
@@ -92,17 +94,24 @@ int llopen(const char *filename, datalink_t *datalink) {
 	int vtime = 0;
 	int vmin = 1;
 	int serial_fd = serial_initialize(filename, vmin, vtime);
-	if (serial_fd < 0) return 1;
+	if (serial_fd < 0) {
+		printf("ERROR (llopen): serial_initialize failed.\n");
+		return 1;
+	}
 	datalink->fd = serial_fd;
 
 	switch(datalink->mode) {
 	case SENDER:
-		if(llopen_transmitter(serial_fd))
+		if(llopen_transmitter(serial_fd)) {
+			printf("ERROR (llopen): llopen_transmitter failed\n");
 			return 1;
+		}
 		break;
 	case RECEIVER:
-		if(llopen_receiver(serial_fd))
+		if(llopen_receiver(serial_fd)) {
+			printf("ERROR (llopen): llopen_receiver failed\n");
 			return 1;
+		}
 		break;
 	default:
 		printf("ERROR (llopen): invalid serial port opening mode.\n");
@@ -115,16 +124,20 @@ int llopen(const char *filename, datalink_t *datalink) {
 int llclose(datalink_t *datalink) {
 	switch(datalink->mode) {
 	case SENDER:
-		if(llclose_transmitter(datalink->fd))
-			return 1;
+		if(llclose_transmitter(datalink->fd)) {
+			printf("ERROR (llclose): llclose_transmitter failed\n");
+			//return 1;
+		}
 		break;
 	case RECEIVER:
-		if(llclose_receiver(datalink->fd))
-			return 1;
+		if(llclose_receiver(datalink->fd)) {
+			printf("ERROR (llclose): llclose_receiver failed\n");
+			//return 1;
+		}
 		break;
 	default:
 		printf("ERROR (llclose): invalid serial port opening mode.");
-		return 1;
+		//return 1;
 	}
 
 	return serial_terminate(datalink->fd);
@@ -147,9 +160,11 @@ int llopen_transmitter(int fd) {
 
 	frame_t answer;
 	if(get_frame(fd, &answer)) {
+		printf("ERROR (llopen_transmitter): get_frame failed\n");
 		return 1;
 	}
 	if(alrm_info.stop == 2) {
+		printf("ERROR (llopen_transmitter): transmission failed (number of attempts to get UA exceeded)\n");
 		return 1;
 	}
 	if(invalid_frame(&answer) || answer.control_field != C_UA) {
@@ -168,6 +183,7 @@ int llopen_receiver(int fd) {
 	while (attempts > 0) {
 		frame_t frame;
 		if(get_frame(fd, &frame)) {
+			printf("ERROR (llopen_receiver): get_frame failed\n");
 			return 1;
 		}
 
@@ -179,8 +195,10 @@ int llopen_receiver(int fd) {
 		}
 		--attempts;
 	}
-	if(attempts <= 0)
+	if(attempts <= 0) {
+		printf("ERROR (llopen_receiver): transmission failed (number of attempts to receiver SET exceeded\n");
 		return 1;
+	}
 
 	frame_t answer;
 	answer.sequence_number = 0;
@@ -213,9 +231,11 @@ int llclose_transmitter(int fd) {
 
 	frame_t answer;
 	if(get_frame(fd, &answer)) {
+		printf("ERROR (llclose_transmitter): get_frame failed\n");
 		return 1;
 	}
 	if(alrm_info.stop == 2) {
+		printf("ERROR (llclose_transmitter)\n");
 		return 1;
 	}
 	if(invalid_frame(&answer) || answer.control_field != C_DISC) {
@@ -245,6 +265,7 @@ int llclose_receiver(int fd) {
 	while (attempts > 0) {
 		frame_t frame;
 		if(get_frame(fd, &frame)) {
+			printf("ERROR (llclose_receiver): get_frame failed\n");
 			return 1;
 		}
 
@@ -256,8 +277,10 @@ int llclose_receiver(int fd) {
 		}
 		--attempts;
 	}
-	if(attempts <= 0)
+	if(attempts <= 0) {
+		printf("ERROR (llclose_receiver): transmission failed (attemts to get DISC exceeded\n");
 		return 1;
+	}
 
 	frame_t answer;
 	answer.sequence_number = 0;
@@ -276,10 +299,20 @@ int llclose_receiver(int fd) {
 int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	frame_t frame;
 	frame.sequence_number = datalink->curr_seq_number;
+<<<<<<< HEAD
 	if ((frame.buffer = malloc(length)) == NULL) return 1;
 	frame.length = length;
+=======
+	if ((frame.buffer = malloc(length)) == NULL) {
+		printf("ERROR (llwrite): unable to allocate %d bytes of memory\n", length);
+		return 1;
+	}
+>>>>>>> branch 'master' of https://github.com/gtugablue/RCOM.git
 	memcpy(frame.buffer, buffer, length);
-	if (send_data_frame(datalink->fd, &frame)) return 1;
+	if (send_data_frame(datalink->fd, &frame)) {
+		printf("ERROR (llwrite): unable to send data frame\n");
+		return 1;
+	}
 	return 0;
 }
 
@@ -297,12 +330,14 @@ int llread(datalink_t *datalink, char * buffer) {
 		break;
 	}
 
+	printf("ERROR (llread): invalid datalink frame order specified\n");
 	return -1;
 }
 
 int llread_first(datalink_t *datalink, char * buffer) {
 	frame_t frame;
 	if(get_data_frame(datalink, &frame)) {
+		printf("ERROR (llread_first): unable to get data frame\n");
 		return -1;
 	}
 	memcpy(buffer, frame.buffer, frame.length);
@@ -310,10 +345,13 @@ int llread_first(datalink_t *datalink, char * buffer) {
 }
 
 int llread_middle(datalink_t *datalink, char * buffer) {
-	if(acknowledge_frame(datalink))
+	if(acknowledge_frame(datalink)) {
+		printf("ERROR (llread_middle): unable to acknowledge previous frame\n");
 		return -1;
+	}
 	frame_t frame;
 	if(get_data_frame(datalink, &frame)) {
+		printf("ERROR (llread_middle): unable to get new data frame\n");
 		return -1;
 	}
 
@@ -322,8 +360,10 @@ int llread_middle(datalink_t *datalink, char * buffer) {
 }
 
 int llread_last(datalink_t *datalink, char * buffer) {
-	if(acknowledge_frame(datalink))
+	if(acknowledge_frame(datalink)) {
+		printf("ERROR (llread_last): unable to acknowledge previous frame\n");
 		return -1;
+	}
 	alrm_info.stop = 1;
 	return 0;
 }
@@ -345,18 +385,18 @@ unsigned acknowledge_frame(datalink_t *datalink) {
 	alrm_info.frame = &frame;
 	alrm_info.stop = 0;
 
-	write_timed_frame();
-
-	return 0;
+	return write_timed_frame();
 }
 
 unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
 	int tries = LLREAD_VALIDMSG_TRIES;
 	while(tries-- > 0) {
 		if(get_frame(datalink->fd, frame)) {
+			printf("ERROR (get_data_frame): unable to get a frame\n");
 			return 1;
 		}
 		if(alrm_info.stop == 2) {
+			printf("ERROR (get_data_frame): unable to get frame, ammount of attempts exceeded\n");
 			return 1;
 		}
 		if(invalid_frame(frame)) {
@@ -403,7 +443,10 @@ int send_cmd_frame(int fd, const frame_t *frame)
 			frame->control_field,
 			frame->address_field ^ frame->control_field,
 			FLAG};
-	if (write(fd, msg, sizeof(msg)) != sizeof(msg)) return 1;
+	if (write(fd, msg, sizeof(msg)) != sizeof(msg)) {
+		printf("ERROR (send_cmd_frame): write failed\n");
+		return 1;
+	}
 
 	return 0;
 }
@@ -434,7 +477,10 @@ int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
 	else bcc2 = 0;
 	unsigned char *bcc2_stuffed;
 	unsigned length2;
-	if (byte_stuffing(&bcc2, sizeof(bcc2), &bcc2_stuffed, &length2)) return 1;
+	if (byte_stuffing(&bcc2, sizeof(bcc2), &bcc2_stuffed, &length2)) {
+		printf("ERROR (send_data_frame): byte_stuffing failed\n");
+		return 1;
+	}
 
 	unsigned char ft[] = {*bcc2_stuffed,
 			FLAG
@@ -473,7 +519,10 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 			stuffed[j] = src[i];
 	}
 	*new_length = j - 1;
-	if ((*dst = malloc(*new_length)) == NULL) return 1;
+	if ((*dst = malloc(*new_length)) == NULL) {
+		printf("ERROR (byte_stuffing): unable to allocate %d bytes of memory\n", j-1);
+		return 1;
+	}
 	memcpy(*dst, stuffed, *new_length);
 	return 0;
 }
@@ -489,7 +538,10 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 			destuffed[j] = src[i];
 	}
 	*new_length = j - 1;
-	if ((*dst = malloc(*new_length)) == NULL) return 1;
+	if ((*dst = malloc(*new_length)) == NULL) {
+		printf("ERROR (byte_destuffing): unable to allocate %d bytes of memory\n", j-1);
+		return 1;
+	}
 	memcpy(*dst, destuffed, *new_length);
 	return 0;
 }
