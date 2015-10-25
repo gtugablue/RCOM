@@ -114,7 +114,7 @@ int llclose(datalink_t *datalink) {
 		return 1;
 	}
 
-	return serial_terminate(fd);
+	return serial_terminate(datalink->fd);
 }
 
 int llopen_transmitter(int fd) {
@@ -265,7 +265,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	frame.sequence_number = 0;
 	if ((frame.buffer = malloc(length)) == NULL) return 1;
 	memcpy(frame.buffer, buffer, length);
-	if (send_data_frame(fd, &frame)) return 1;
+	if (send_data_frame(datalink->fd, &frame)) return 1;
 	return 0;
 }
 
