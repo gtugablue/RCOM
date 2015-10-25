@@ -26,6 +26,7 @@ int llread_last(datalink_t *datalink, char * buffer);
 unsigned acknowledge_frame(datalink_t *datalink);
 unsigned get_data_frame(datalink_t *datalink, frame_t *frame);
 void inc_sequence_number(unsigned int *seq_num);
+int check_frame_order(datalink_t *datalink, frame_t *frame);
 
 alarm_info_t alrm_info;
 void alarm_handler() {
@@ -275,7 +276,7 @@ int llclose_receiver(int fd) {
 int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 
 	frame_t frame;
-	frame.sequence_number = 0;
+	frame.sequence_number = datalink->curr_seq_number;
 	if ((frame.buffer = malloc(length)) == NULL) return 1;
 	memcpy(frame.buffer, buffer, length);
 	if (send_data_frame(datalink->fd, &frame)) return 1;
@@ -323,6 +324,7 @@ int llread_middle(datalink_t *datalink, char * buffer) {
 int llread_last(datalink_t *datalink, char * buffer) {
 	if(acknowledge_frame(datalink))
 		return -1;
+	alrm_info.stop = 1;
 	return 0;
 }
 
@@ -362,13 +364,24 @@ unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
 			return 1;
 		}
 
-		// TODO check frame order bit
-		// TODO get_packet must return destuffed frame
+		if(check_frame_order(datalink, frame)) {
+			continue;
+		}
 
 		alrm_info.stop = 1;
+
+		return 0;
 	}
 
-	return 0;
+	return 1;
+}
+
+int check_frame_order(datalink_t *datalink, frame_t *frame) {
+	if((ORDER_BIT(datalink->curr_seq_number) & ORDER_BIT(1)) ^ frame->control_field) {
+		return 0;
+	} else {
+		return 1;
+	}
 }
 
 int send_frame(int fd, const frame_t *frame) {
@@ -482,6 +495,8 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 }
 
 int get_frame(int fd, frame_t *frame) {
+
+	// TODO get_packet must return destuffed frame
 	state_t state = START;
 	unsigned char byte;
 	if ((frame->buffer = malloc(sizeof(char) * 50000)) == NULL) return 1;

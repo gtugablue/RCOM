@@ -3,6 +3,10 @@
 
 #include <stdlib.h>
 
+#define BIT(n) (1 << n)
+
+#define ORDER_BIT(n) (n << 5)
+
 /*
  * Describe function return values
  */
