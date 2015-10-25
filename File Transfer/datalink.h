@@ -99,35 +99,5 @@ int llread(int fd, char * buffer);
  */
 int llclose(int fd, int mode);
 
-int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
-
-/*
- * Writes given message a certain ammount of times with a delay between each of them, using alarms.
- * @param alrm_info_arg struct with alarm information
- * @return 0 if OK, > 0  otherwise
- */
-int write_timed_frame(alarm_info_t *alrm_info_arg);
-//int write_timed_message(int fd, char *msg, unsigned int len, unsigned int tries, unsigned int time_dif, unsigned int *stop_flag);
-
-/*
- * Checks if stop flag is active or there are remaining tries, then writes the message again
- */
-void alarm_handler();
-
-int llopen_transmitter(int fd);
-
-int llopen_receiver(int fd);
-
-int llclose_transmitter(int fd);
-
-int llclose_receiver(int fd);
-
-frame_t* get_frame(int fd);
-
-int send_frame(int fd, const frame_t *frame);
-
-int send_cmd_frame(int fd, const frame_t *frame);
-
-int send_data_frame(int fd, const frame_t *frame);
 
 #endif

@@ -11,7 +11,15 @@ int send_cmd_frame(int fd, const frame_t *frame);
 int send_data_frame(int fd, const frame_t *frame);
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
-frame_t* get_frame(int fd);
+int get_frame(int fd, frame_t *frame);
+int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
+int write_timed_frame(alarm_info_t *alrm_info_arg);
+void alarm_handler();
+int send_frame(int fd, const frame_t *frame);
+int llopen_transmitter(int fd);
+int llopen_receiver(int fd);
+int llclose_transmitter(int fd);
+int llclose_receiver(int fd);
 
 alarm_info_t alrm_info;
 void alarm_handler() {
@@ -127,11 +135,14 @@ int llopen_transmitter(int fd) {
 
 	write_timed_frame(&alarm_inf);
 
-	frame_t *answer = get_frame(fd);
+	frame_t answer;
+	if(get_frame(fd, &answer)) {
+		return 1;
+	}
 	if(stop == 2) {
 		return 1;
 	}
-	if(answer == NULL || invalid_frame(&frame) || answer->control_field != C_UA) {
+	if(invalid_frame(&answer) || answer.control_field != C_UA) {
 		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame\n");
 		return 1;
 	}
@@ -147,13 +158,12 @@ int llopen_receiver(int fd) {
 	int attempts = INIT_CONNECTION_TRIES;
 
 	while (attempts > 0) {
-		frame_t *frame = get_frame(fd);
+		frame_t frame;
+		if(get_frame(fd, &frame)) {
+			return 1;
+		}
 
-		printf("Frame NULL %d\n", frame == NULL);
-		printf("Invalid frame %d\n", invalid_frame(frame));
-		//printf("Frame buf %x\n", frame->buffer[0]);
-
-		if(frame == NULL || invalid_frame(frame) || frame->control_field != C_SET) {
+		if(invalid_frame(&frame) || frame.control_field != C_SET) {
 			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame\n");
 			//return 1;
 		} else {
@@ -196,11 +206,14 @@ int llclose_transmitter(int fd) {
 
 	write_timed_frame(&alarm_inf);
 
-	frame_t *answer = get_frame(fd);
+	frame_t answer;
+	if(get_frame(fd, &answer)) {
+		return 1;
+	}
 	if(stop == 2) {
 		return 1;
 	}
-	if(answer == NULL || invalid_frame(&answer) || answer->control_field != C_DISC) {
+	if(invalid_frame(&answer) || answer.control_field != C_DISC) {
 		printf("ERROR (llclose_transmitter): received invalid frame. Expected valid DISC command frame.\n");
 		return 1;
 	}
@@ -225,9 +238,12 @@ int llclose_receiver(int fd) {
 	int attempts = FINAL_DISCONNECTION_TRIES;
 
 	while (attempts > 0) {
-		frame_t *frame = get_frame(fd);
+		frame_t frame;
+		if(get_frame(fd, &frame)) {
+			return 1;
+		}
 
-		if(frame == NULL || invalid_frame(frame) || frame->control_field != C_DISC) {
+		if(invalid_frame(&frame) || frame.control_field != C_DISC) {
 			printf("ERROR (llclose_receiver): received invalid frame. Expected valid DISC command frame.\n");
 			//return 1;
 		} else {
@@ -379,7 +395,7 @@ int get_frame(int fd, frame_t *frame) {
 	while(state != STOP) {
 		int ret = read_byte(fd, &byte);
 		if(ret == 0) {
-			return NULL;
+			return 1;
 		}
 
 		switch(state) {
