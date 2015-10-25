@@ -59,7 +59,7 @@ typedef enum {START,
 /*
  * Define the program mode (either reader or writer)
  */
-#define SENDER 0
+#define SENDER 0	// TODO enum
 #define RECEIVER 1
 
 #define INIT_CONNECTION_TRIES 5
@@ -68,12 +68,19 @@ typedef enum {START,
 #define FINAL_DISCONNECTION_RESEND_TIME 1
 
 typedef struct {
-	unsigned int fd;
+	int fd;
 	unsigned int tries_left;
 	unsigned int time_dif;
 	frame_t *frame;
 	unsigned int stop;
 } alarm_info_t;
+
+typedef struct {
+	int fd;
+	int mode;
+	unsigned int curr_seq_number;
+	unsigned int repeat;
+} datalink_t;
 
 /*
  * Starts the connection via serial-port, allowing for it to be either reader or writer
