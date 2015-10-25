@@ -415,7 +415,7 @@ int get_frame(int fd, frame_t *frame) {
 		case A_RCV:
 			if(byte == FLAG) {
 				state = FLAG_RCV;
-			} else if(byte == C_SET || byte == C_UA || byte == C_DATA(0) || byte == C_DATA(1)) {
+			} else if(byte == C_SET || byte == C_UA || byte == C_DISC || byte == C_DATA(0) || byte == C_DATA(1)) {
 				frame->type = CMD_FRAME;
 				frame->control_field = byte;
 				state = C_RCV;
