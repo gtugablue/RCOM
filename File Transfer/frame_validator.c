@@ -24,7 +24,7 @@ int invalid_data_frame(const frame_t *frame) {
 
 int invalid_cmd_frame(const frame_t *frame) {
 
-	if(frame->length != 1 || (frame->buffer[0] ^ frame->address_field) != frame->bcc1) {
+	if((frame->control_field ^ frame->address_field) != frame->bcc1) {
 		return 1;
 	}
 

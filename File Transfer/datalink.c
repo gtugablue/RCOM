@@ -113,9 +113,7 @@ int llopen_transmitter(int fd) {
 
 	frame_t frame;
 	frame.sequence_number = 0;
-	frame.length = 1;
-	frame.buffer = malloc(sizeof(char));
-	frame.buffer[0] = C_SET;
+	frame.control_field = C_SET;
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
@@ -133,7 +131,7 @@ int llopen_transmitter(int fd) {
 	if(stop == 2) {
 		return 1;
 	}
-	if(answer == NULL || invalid_frame(&frame) || answer->buffer[0] != C_UA) {
+	if(answer == NULL || invalid_frame(&frame) || answer->control_field != C_UA) {
 		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame\n");
 		return 1;
 	}
@@ -155,7 +153,7 @@ int llopen_receiver(int fd) {
 		printf("Invalid frame %d\n", invalid_frame(frame));
 		printf("Frame buf %x\n", frame->buffer[0]);
 
-		if(frame == NULL || invalid_frame(frame) || frame->buffer[0] != C_SET) {
+		if(frame == NULL || invalid_frame(frame) || frame->control_field != C_SET) {
 			printf("ERROR (llopen_receiver): received invalid frame. Expected valid SET command frame\n");
 			//return 1;
 		} else {
@@ -168,9 +166,7 @@ int llopen_receiver(int fd) {
 
 	frame_t answer;
 	answer.sequence_number = 0;
-	answer.length = 1;
-	answer.buffer = malloc(sizeof(char));
-	answer.buffer[0] = C_UA;
+	answer.control_field = C_UA;
 	answer.type = CMD_FRAME;
 	answer.address_field = A_TRANSMITTER;
 
@@ -186,9 +182,7 @@ int llclose_transmitter(int fd) {
 
 	frame_t frame;
 	frame.sequence_number = 0;
-	frame.length = 1;
-	frame.buffer = malloc(sizeof(char));
-	frame.buffer[0] = C_DISC;
+	frame.control_field = C_DISC;
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
@@ -206,7 +200,7 @@ int llclose_transmitter(int fd) {
 	if(stop == 2) {
 		return 1;
 	}
-	if(answer == NULL || invalid_frame(&frame) || answer->buffer[2] != C_DISC) {
+	if(answer == NULL || invalid_frame(&answer) || answer->control_field != C_DISC) {
 		printf("ERROR (llclose_transmitter): received invalid frame. Expected valid DISC command frame.\n");
 		return 1;
 	}
@@ -214,9 +208,7 @@ int llclose_transmitter(int fd) {
 
 	frame_t final_ua;
 	final_ua.sequence_number = 0;
-	final_ua.length = 1;
-	final_ua.buffer = malloc(sizeof(char));
-	final_ua.buffer[0] = C_UA;
+	final_ua.control_field = C_UA;
 	final_ua.type = CMD_FRAME;
 	final_ua.address_field = A_TRANSMITTER;
 
@@ -235,7 +227,7 @@ int llclose_receiver(int fd) {
 	while (attempts > 0) {
 		frame_t *frame = get_frame(fd);
 
-		if(frame == NULL || invalid_frame(frame) || frame->buffer[2] != C_DISC) {
+		if(frame == NULL || invalid_frame(frame) || frame->control_field != C_DISC) {
 			printf("ERROR (llclose_receiver): received invalid frame. Expected valid DISC command frame.\n");
 			//return 1;
 		} else {
@@ -248,9 +240,7 @@ int llclose_receiver(int fd) {
 
 	frame_t answer;
 	answer.sequence_number = 0;
-	answer.length = 1;
-	answer.buffer = malloc(sizeof(char));
-	answer.buffer[0] = C_DISC;
+	answer.control_field = C_DISC;
 	answer.type = CMD_FRAME;
 	answer.address_field = A_TRANSMITTER;
 
@@ -289,13 +279,10 @@ int send_frame(int fd, const frame_t *frame) {
 
 int send_cmd_frame(int fd, const frame_t *frame)
 {
-	if(frame->buffer == NULL || frame->length != 1)
-		return 1;
-
 	unsigned char msg[] = {FLAG,
 			frame->address_field,
-			frame->buffer[0],
-			A_TRANSMITTER ^ frame->buffer[0],
+			frame->control_field,
+			A_TRANSMITTER ^ frame->control_field,
 			FLAG};
 	if (write(fd, msg, sizeof(msg)) != sizeof(msg)) return 1;
 
