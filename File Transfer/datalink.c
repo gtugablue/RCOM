@@ -314,6 +314,7 @@ int llread_middle(datalink_t *datalink, char * buffer) {
 	frame_t frame;
 	if(get_data_frame(datalink, &frame)) {
 		return -1;
+	}
 
 	memcpy(buffer, frame.buffer, frame.length);
 	return frame.length;
