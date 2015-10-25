@@ -327,12 +327,47 @@ int llread_last(datalink_t *datalink, char * buffer) {
 }
 
 unsigned acknowledge_frame(datalink_t *datalink) {
-	// TODO acknowledge current frame if not to repeat
+	if(!datalink->repeat) {
+		inc_sequence_number(&datalink->curr_seq_number);
+	}
+
+	frame_t frame;
+	frame.sequence_number = datalink->curr_seq_number;
+	frame.control_field = C_RR(frame.sequence_number);
+	frame.type = CMD_FRAME;
+	frame.address_field = A_TRANSMITTER;
+
+	alrm_info.fd = datalink->fd;
+	alrm_info.tries_left = LLREAD_ANSWER_TRIES;
+	alrm_info.time_dif = LLREAD_ANSWER_RESEND_TIME;
+	alrm_info.frame = &frame;
+	alrm_info.stop = 0;
+
+	write_timed_frame();
+
 	return 0;
 }
 
 unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
-	// TODO get a frame with some tries and attention to global stop for alarms
+	int tries = LLREAD_VALIDMSG_TRIES;
+	while(tries-- > 0) {
+		if(get_frame(datalink->fd, &frame)) {
+			return 1;
+		}
+		if(alrm_info.stop == 2) {
+			return 1;
+		}
+		if(invalid_frame(&frame)) {
+			printf("ERROR (get_data_frame): received invalid frame. Expected valid DATA frame\n");
+			return 1;
+		}
+
+		// TODO check frame order bit
+		// TODO get_packet must return destuffed frame
+
+		alrm_info.stop = 1;
+	}
+
 	return 0;
 }
 
