@@ -384,11 +384,10 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 	return 0;
 }
 
-frame_t* get_frame(int fd) {
+int get_frame(int fd, frame_t *frame) {
 	state_t state = START;
 	unsigned char byte;
-	frame_t *frame = (frame_t *)malloc(sizeof(frame_t));
-	frame->buffer = malloc(sizeof(char) * 50);
+	if ((frame->buffer = malloc(sizeof(char) * 50000)) == NULL) return 1;
 
 	while(state != STOP) {
 		int ret = read_byte(fd, &byte);
@@ -400,61 +399,48 @@ frame_t* get_frame(int fd) {
 		case START:
 			if(byte == FLAG) {
 				state = FLAG_RCV;
-				frame->buffer[frame->length++] = byte;
 			}
 			break;
 		case FLAG_RCV:
 			if(byte == A_TRANSMITTER || byte == A_RECEIVER) {	// TODO check
 				state = A_RCV;
-				frame->buffer[frame->length++] = byte;
+				frame->address_field = byte;
 			} else if(byte != FLAG) {
 				state = START;
-				frame->length = 0;
 			}
 			break;
 		case A_RCV:
 			if(byte == FLAG) {
-				frame->length = 1;
 				state = FLAG_RCV;
-			} else if(byte == C_SET) {
-				frame->type = SET;
-				frame->buffer[frame->length++] = byte;
-				state = C_RCV;
-			} else if(byte == C_UA) {
-				frame->type = UA;
-				frame->buffer[frame->length++] = byte;
-				state = C_RCV;
-			} else if(byte == C_DATA(0)  || byte == C_DATA(1)) {
-				frame->type = DATA;
-				frame->buffer[frame->length++] = byte;
+			} else if(byte == C_SET || byte == C_UA || byte == C_DATA(0) || byte == C_DATA(1)) {
+				frame->type = CMD_FRAME;
+				frame->control_field = byte;
 				state = C_RCV;
 			} else {
-				frame->length = 0;
 				state = START;
 			}
 			break;
 		case C_RCV:
-			if(byte == (frame->buffer[1] ^ frame->buffer[2])) {
-				if(frame->type == SET || frame->type == UA)
+		{
+			unsigned char bcc1 = frame->address_field ^ frame->control_field;
+			if(byte == bcc1) {
+				if(frame->type == CMD_FRAME)
 					state = BCC1_RCV;
 				else
 					state = DATA_ESC_RCV;
 
-				frame->buffer[frame->length++] = byte;
+				frame->bcc1 = bcc1;
 			} else if (byte == FLAG){
 				state = FLAG_RCV;
-				frame->length = 1;
 			} else {
-				frame->length = 0;
 				state = START;
 			}
 			break;
+		}
 		case BCC1_RCV:
 			if(byte == FLAG) {
-				frame->buffer[frame->length++] = byte;
 				state = STOP;
 			} else {
-				frame->length = 0;
 				state = START;
 			}
 			break;
@@ -462,7 +448,6 @@ frame_t* get_frame(int fd) {
 			if(byte == ESC) {
 				state = DATA_RCV;
 			} else if(byte == FLAG) {
-				frame->buffer[frame->length++] = byte;
 				//if(bcc2_checks(&frame)) {
 				state = STOP;
 				//}
@@ -479,7 +464,7 @@ frame_t* get_frame(int fd) {
 		}
 	}
 
-	return frame;
+	return 0;
 }
 
 /*
