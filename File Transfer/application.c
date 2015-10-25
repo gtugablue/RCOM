@@ -71,8 +71,8 @@ int send_data_packet(int fd, const data_packet_t *data_packet)
 	packet[2] = data_packet->length & 0xFF00;
 	packet[3] = data_packet->length & 0x00FF;
 	memcpy(&packet[4], data_packet->data, length);
-	if (llwrite(fd, packet, size) < 0) return 1;
-	// TODO
+	//if (llwrite(fd, packet, size) < 0) return 1;
+	printf("Cenas: %s\n", packet);
 }
 
 int receive_file(const unsigned char *port, const unsigned char *destination_folder)
