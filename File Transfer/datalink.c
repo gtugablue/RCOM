@@ -299,15 +299,11 @@ int llclose_receiver(int fd) {
 int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	frame_t frame;
 	frame.sequence_number = datalink->curr_seq_number;
-<<<<<<< HEAD
-	if ((frame.buffer = malloc(length)) == NULL) return 1;
-	frame.length = length;
-=======
 	if ((frame.buffer = malloc(length)) == NULL) {
 		printf("ERROR (llwrite): unable to allocate %d bytes of memory\n", length);
 		return 1;
 	}
->>>>>>> branch 'master' of https://github.com/gtugablue/RCOM.git
+	frame.length = length;
 	memcpy(frame.buffer, buffer, length);
 	if (send_data_frame(datalink->fd, &frame)) {
 		printf("ERROR (llwrite): unable to send data frame\n");
