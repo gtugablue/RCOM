@@ -17,17 +17,19 @@ typedef struct {
 } control_packet_param_t;
 
 typedef struct {
-	unsigned char ctrl_field;
+	packet_ctrl_field_t ctrl_field;
 	unsigned char sn;
 	uint16_t length;
 	unsigned char *data;
 } data_packet_t;
 
 typedef struct {
-	unsigned char ctrl_field;
+	packet_ctrl_field_t ctrl_field;
 	unsigned num_params;
 	control_packet_param_t *params;
 } control_packet_t;
+
+int send_data_packet(int fd, const data_packet_t *data_packet);
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
@@ -40,7 +42,7 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 	return 0;
 }
 
-int send_file(const unsigned char *port, const unsigned char *file_name)
+int send_file(const char *port, const char *file_name)
 {
 	FILE *fp = fopen(file_name, "r");
 	fseek(fp, 0, SEEK_END);
@@ -50,16 +52,21 @@ int send_file(const unsigned char *port, const unsigned char *file_name)
 	fread(data, size, 1, fp);
 	fclose(fp);
 
-	int fd = llopen(port, TRANSMITTER);
+	int fd = llopen(port, SENDER);
 	if (fd < 0) return 1;
 
 	unsigned i;
 	for (i = 0; i < size; i += MAX_PACKET_SIZE)
 	{
-		if (send_packet(fd, &data[i], MAX(MAX_PACKET_SIZE, size - i))) return 1;
+		data_packet_t data_packet;
+		data_packet.ctrl_field = PACKET_CTRL_FIELD_DATA;
+		data_packet.sn = i;
+		data_packet.length = MAX(MAX_PACKET_SIZE, size - i);
+		data_packet.data = &data[i];
+		if (send_data_packet(fd, &data_packet)) return 1;
 	}
 
-	return llclose(fd);
+	return llclose(fd, SENDER);
 }
 
 int send_data_packet(int fd, const data_packet_t *data_packet)
@@ -75,7 +82,7 @@ int send_data_packet(int fd, const data_packet_t *data_packet)
 	printf("Cenas: %s\n", packet);
 }
 
-int receive_file(const unsigned char *port, const unsigned char *destination_folder)
+int receive_file(const char *port, const char *destination_folder)
 {
 
 }

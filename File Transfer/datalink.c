@@ -73,7 +73,7 @@ int read_byte(int fd, unsigned char *c)
 	return res;
 }
 
-int llopen(char *filename, int mode) {
+int llopen(const char *filename, int mode) {
 	int vtime = 0;
 	int vmin = 1;
 	int serial_fd = serial_initialize(filename, vmin, vtime);

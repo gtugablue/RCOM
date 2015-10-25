@@ -86,7 +86,7 @@ typedef struct {
  * Starts the connection via serial-port, allowing for it to be either reader or writer
  * Returns port fd, -1 if error
  */
-int llopen(char *filename, int mode);
+int llopen(const char *filename, int mode);
 
 /*
  * Writes length bytes from buffer to fd

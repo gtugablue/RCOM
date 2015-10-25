@@ -24,7 +24,7 @@
  Open serial port device for reading and writing and not as controlling tty
  because we don't want to get killed if linenoise sends CTRL-C.
  */
-int serial_initialize(char *serial_port, int vmin, int vtime);
+int serial_initialize(const char *serial_port, int vmin, int vtime);
 int serial_terminate(int fd);
 
 #endif

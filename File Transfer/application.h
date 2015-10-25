@@ -5,7 +5,7 @@
 
 #define MAX_PACKET_SIZE	1024
 
-int send_file(const unsigned char *port, const unsigned char *file_name);
-int receive_file(const unsigned char *port, const unsigned char *destination_folder);
+int send_file(const char *port, const char *file_name);
+int receive_file(const char *port, const char *destination_folder);
 
 #endif
