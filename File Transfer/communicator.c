@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "datalink.h"
 
 int main(int argc, char** argv)
@@ -24,10 +25,14 @@ int main(int argc, char** argv)
 
 	//serial_terminate(serial_fd);
 
-	if(strcmp(argv[2], "TRANSMITTER") == 0) {
-		/*int fd = */llopen(argv[1], TRANSMITTER);
+	if(strcmp(argv[2], "SENDER") == 0) {
+		int fd = llopen(argv[1], SENDER);
+		sleep(1);
+		llclose(fd, SENDER);
 	} else if(strcmp(argv[2], "RECEIVER") == 0) {
-		/*int fd = */llopen(argv[1], RECEIVER);
+		int fd = llopen(argv[1], RECEIVER);
+		sleep(1);
+		llclose(fd, RECEIVER);
 	}
 
 	return 0;

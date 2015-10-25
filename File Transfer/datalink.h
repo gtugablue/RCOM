@@ -59,7 +59,7 @@ typedef enum {START,
 /*
  * Define the program mode (either reader or writer)
  */
-#define TRANSMITTER 0
+#define SENDER 0
 #define RECEIVER 1
 
 #define INIT_CONNECTION_TRIES 5

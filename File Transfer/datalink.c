@@ -75,13 +75,13 @@ int read_byte(int fd, unsigned char *c)
 }
 
 int llopen(char *filename, int mode) {
-	int vtime = 30;
-	int vmin = 0;
+	int vtime = 0;
+	int vmin = 1;
 	int serial_fd = serial_initialize(filename, vmin, vtime);
 	if (serial_fd < 0) return -1;
 
 	switch(mode) {
-	case TRANSMITTER:
+	case SENDER:
 		if(llopen_transmitter(serial_fd))
 			return -1;
 		break;
@@ -99,7 +99,7 @@ int llopen(char *filename, int mode) {
 
 int llclose(int fd, int mode) {
 	switch(mode) {
-	case TRANSMITTER:
+	case SENDER:
 		if(llclose_transmitter(fd))
 			return -1;
 		break;
