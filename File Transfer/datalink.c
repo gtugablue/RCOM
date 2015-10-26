@@ -298,6 +298,8 @@ int llclose_receiver(int fd) {
 
 int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 
+	unsigned comm_successful = 0;
+	unsigned attempts = LLWRITE_ANSWER_TRIES;
 	frame_t frame;
 	frame.sequence_number = datalink->curr_seq_number;
 	if ((frame.buffer = malloc(length)) == NULL) {
@@ -305,10 +307,39 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 		return 1;
 	}
 	memcpy(frame.buffer, buffer, length);
-	if (send_data_frame(datalink->fd, &frame)) {
-		printf("ERROR (llwrite): unable to send data frame\n");
+
+	while(attempts-- > 0) {
+		if (send_data_frame(datalink->fd, &frame)) {
+			printf("ERROR (llwrite): unable to send data frame\n");
+			return 1;
+		}
+
+		frame_t answer;
+		if(get_frame(fd, &answer)) {
+			printf("ERROR (llwrite): get_frame failed\n");
+			continue;
+		}
+		if(alrm_info.stop == 2) {
+			printf("ERROR (llwrite): transmission failed (number of attempts to get RR exceeded)\n");
+			continue;
+		}
+		if(invalid_frame(&answer)) {
+			printf("ERROR (llwrite): received invalid frame. Expected valid RR command frame\n");
+			continue;
+		}
+
+		if(check_frame_order(datalink, frame))
+			continue;
+
+		alrm_info.stop = 1;
+		break;
+	}
+
+	if(attempts == 0) {
+		printf("ERROR (llwrite): communication failed. Attempts to send frame exceeded limit(%d)", LLWRITE_ANSWER_TRIES);
 		return 1;
 	}
+	inc_sequence_number(&datalink->curr_seq_number);
 	return 0;
 }
 
@@ -447,7 +478,7 @@ int send_cmd_frame(int fd, const frame_t *frame)
 	return 0;
 }
 
-int send_data_frame(int fd, const frame_t *frame) // TODO UNTESTED
+int send_data_frame(int fd, const frame_t *frame)
 {
 	unsigned char ctrl = frame->sequence_number << 5;
 	unsigned char fh[] = {FLAG,
@@ -562,7 +593,7 @@ int get_frame(int fd, frame_t *frame) {
 			}
 			break;
 		case FLAG_RCV:
-			if(byte == A_TRANSMITTER || byte == A_RECEIVER) {	// TODO check
+			if(byte == A_TRANSMITTER || byte == A_RECEIVER) {
 				state = A_RCV;
 				frame->address_field = byte;
 			} else if(byte != FLAG) {
