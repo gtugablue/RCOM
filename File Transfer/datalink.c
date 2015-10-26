@@ -306,6 +306,21 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	}
 	memcpy(frame.buffer, buffer, length);
 
+	frame.control_field = C_DATA(frame.sequence_number);
+	frame.type = DATA_FRAME;
+	frame.address_field = A_TRANSMITTER;
+
+	alrm_info.fd = datalink->fd;
+	alrm_info.tries_left = INIT_CONNECTION_TRIES;
+	alrm_info.time_dif = INIT_CONNECTION_RESEND_TIME;
+	alrm_info.frame = &frame;
+	alrm_info.stop = 0;
+
+	if(write_timed_message()) {
+		printf("ERROR (llwrite): unable to start alarms\n");
+		return 1;
+	}
+
 	while(attempts-- > 0) {
 		if (send_data_frame(datalink->fd, &frame)) {
 			printf("ERROR (llwrite): unable to send data frame\n");
@@ -421,6 +436,8 @@ unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
 			printf("ERROR (get_data_frame): unable to get frame, ammount of attempts exceeded\n");
 			return 1;
 		}
+
+		printf("2: 0x%02X\n", ORDER_BIT(datalink->curr_seq_number));
 		if(invalid_frame(frame) || frame->control_field != BIT(datalink->curr_seq_number)) {
 			printf("ERROR (get_data_frame): received invalid frame. Expected valid DATA frame\n");
 			return 1;
@@ -551,7 +568,6 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 
 int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length)
 {
-	printf("1\n");
 	unsigned char destuffed[length];
 	unsigned i;
 	unsigned j;
@@ -561,15 +577,12 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 			destuffed[j] = src[i];
 	}
 
-	printf("2\n");
 	*new_length = j;
 	if ((*dst = malloc(*new_length)) == NULL) {
 		printf("ERROR (byte_destuffing): unable to allocate %d bytes of memory\n", *new_length);
 		return 1;
 	}
-	printf("=> %d\n", *new_length);
 	memcpy(*dst, destuffed, *new_length);
-	printf("4\n");
 	return 0;
 }
 
@@ -594,6 +607,8 @@ int get_frame(int fd, frame_t *frame) {
 			return 1;
 		}
 
+		printf("STATE: %d\n", (int)state);
+
 		switch(state) {
 		case START:
 			if(byte == FLAG) {
@@ -611,8 +626,12 @@ int get_frame(int fd, frame_t *frame) {
 		case A_RCV:
 			if(byte == FLAG) {
 				state = FLAG_RCV;
-			} else if(byte == C_SET || byte == C_UA || byte == C_DISC || byte == C_DATA(0) || byte == C_DATA(1)) {
+			} else if(byte == C_SET || byte == C_UA || byte == C_DISC) {
 				frame->type = CMD_FRAME;
+				frame->control_field = byte;
+				state = C_RCV;
+			} else if(byte == C_DATA(0) || byte == C_DATA(1)) {
+				frame->type = DATA_FRAME;
 				frame->control_field = byte;
 				state = C_RCV;
 			} else {
@@ -621,19 +640,13 @@ int get_frame(int fd, frame_t *frame) {
 			break;
 		case C_RCV:
 		{
-			unsigned char bcc1 = frame->address_field ^ frame->control_field;
-			if(byte == bcc1) {
-				if(frame->type == CMD_FRAME)
-					state = BCC1_RCV;
-				else
-					state = DATA_ESC_RCV;
+			//unsigned char bcc1 = frame->address_field ^ frame->control_field;
+			if(frame->type == CMD_FRAME)
+				state = BCC1_RCV;
+			else
+				state = DATA_ESC_RCV;
 
-				frame->bcc1 = bcc1;
-			} else if (byte == FLAG){
-				state = FLAG_RCV;
-			} else {
-				state = START;
-			}
+			frame->bcc1 = byte;
 			break;
 		}
 		case BCC1_RCV:
@@ -669,6 +682,12 @@ int get_frame(int fd, frame_t *frame) {
 		if(byte_destuffing(buf, buf_length, &frame->buffer, &frame->length)) {
 			printf("ERROR (get_frame): failed to perform destuffing on DATA frame received\n");
 			return 1;
+		}
+		if(frame->length > 0) {
+			--frame->length;
+			frame->bcc2 = frame->buffer[frame->length];
+		} else {
+			frame->bcc2 = 0;
 		}
 	}
 
