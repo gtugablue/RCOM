@@ -79,7 +79,7 @@ int send_file(const char *port, const char *file_name)
 	fseek(fp, 0, SEEK_END);
 	unsigned long size = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
-	unsigned char data[size];
+	char data[size];
 	fread(data, size, 1, fp);
 	fclose(fp);
 
