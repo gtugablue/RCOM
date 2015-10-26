@@ -297,8 +297,6 @@ int llclose_receiver(int fd) {
 }
 
 int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
-
-	unsigned comm_successful = 0;
 	unsigned attempts = LLWRITE_ANSWER_TRIES;
 	frame_t frame;
 	frame.sequence_number = datalink->curr_seq_number;
@@ -315,7 +313,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 		}
 
 		frame_t answer;
-		if(get_frame(fd, &answer)) {
+		if(get_frame(datalink->fd, &answer)) {
 			printf("ERROR (llwrite): get_frame failed\n");
 			continue;
 		}
@@ -323,13 +321,10 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 			printf("ERROR (llwrite): transmission failed (number of attempts to get RR exceeded)\n");
 			continue;
 		}
-		if(invalid_frame(&answer)) {
+		if(invalid_frame(&answer) || frame.control_field != C_RR(datalink->sequence_number)) {
 			printf("ERROR (llwrite): received invalid frame. Expected valid RR command frame\n");
 			continue;
 		}
-
-		if(check_frame_order(datalink, frame))
-			continue;
 
 		alrm_info.stop = 1;
 		break;
