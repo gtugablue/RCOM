@@ -249,8 +249,10 @@ int receive_file(const char *port, const char *destination_folder)
 	// Read data
 	unsigned long bytes_read = 0;
 	unsigned char sn = 0;
-	while (bytes_read < size)
+	unsigned long file_size = strtoul(param_size->value, NULL, 10);
+	while (bytes_read < file_size)
 	{
+		printf("1 - bytes_read: %lu, size: %lu\n", bytes_read, size);
 		data_packet_t data_packet;
 		if (llread(&datalink, buf) < 0) return 1;
 		data_packet.ctrl_field = buf[0];
@@ -274,6 +276,7 @@ int receive_file(const char *port, const char *destination_folder)
 			return 1;
 		}
 		bytes_read += data_packet.length;
+		printf("2 - bytes_read: %lu, size: %lu\n", bytes_read, size);
 	}
 
 	if (llclose(&datalink))
