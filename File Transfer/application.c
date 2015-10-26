@@ -48,6 +48,10 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 	} else if(strcmp(argv[2], "receive") == 0) {
 		datalink_init(&datalink, RECEIVER);
 		llopen(argv[1], &datalink);
+		unsigned char buf[1000000];
+		printf("Reading...\n");
+		llread(&datalink, buf);
+		printf("Read done.\n");
 		// TODO
 	}
 	return 0;
@@ -66,7 +70,7 @@ int send_file(const char *port, const char *file_name)
 
 	datalink_t datalink;
 	datalink.mode = SENDER;
-	//if (llopen(port, &datalink)) return 1;
+	if (llopen(port, &datalink)) return 1;
 
 	unsigned long i;
 	for (i = 0; i < size; i += MAX_PACKET_SIZE)

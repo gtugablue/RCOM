@@ -4,7 +4,7 @@ struct termios oldtio;	// TO ALLOW serial_terminate TO WORK
 
 int serial_initialize(const char *serial_port, int vmin, int vtime) {
 	struct termios newtio;
-	int fd = open(serial_port, O_RDWR | O_NOCTTY );
+	int fd = open(serial_port, O_RDWR | O_NOCTTY);
 	if (fd <0) {
 		perror(serial_port);
 		return -1;
