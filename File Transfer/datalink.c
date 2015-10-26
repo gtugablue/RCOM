@@ -183,6 +183,7 @@ int llopen_receiver(int fd) {
 
 	alrm_info.frame = NULL;
 	alrm_info.tries_left = 0;
+	signal(SIGALRM, alarm_handler);
 	alarm(15);
 
 	int attempts = INIT_CONNECTION_TRIES;
@@ -380,6 +381,7 @@ int llread(datalink_t *datalink, char * buffer) {
 
 	alrm_info.frame = NULL;
 	alrm_info.tries_left = 0;
+	signal(SIGALRM, alarm_handler);
 	alarm(15);
 
 	frame_t frame;
@@ -669,7 +671,7 @@ int get_frame(int fd, frame_t *frame) {
 		case A_RCV:
 			if(byte == FLAG) {
 				state = FLAG_RCV;
-			} else if(byte == C_SET || byte == C_UA || byte == C_DISC || CC_REJ(0) || CC_REJ(1)) {
+			} else if(byte == C_SET || byte == C_UA || byte == C_DISC || C_REJ(0) || C_REJ(1)) {
 				frame->type = CMD_FRAME;
 				frame->control_field = byte;
 				state = C_RCV;
