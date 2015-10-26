@@ -135,6 +135,7 @@ int send_file(const char *port, const char *file_name)
 
 int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet)
 {
+	printf("Sending control packet...\n");
 	unsigned size = 4;
 	unsigned i;
 	for (i = 0; i < control_packet->num_params; ++i)
@@ -156,6 +157,7 @@ int send_control_packet(datalink_t *datalink, const control_packet_t *control_pa
 
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 {
+	printf("Sending data packet...\n");
 	unsigned size = data_packet->length + 4;
 	unsigned char packet[size];
 	packet[0] = data_packet->ctrl_field;

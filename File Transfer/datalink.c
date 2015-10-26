@@ -556,7 +556,9 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 	unsigned j;
 	for (i = 0, j = 0; i < length; ++i, ++j)
 	{
-		if(src[i] != ESC)
+		if(src[i] == ESC)
+			destuffed[j] = src[++i] ^ ESC_XOR;
+		else
 			destuffed[j] = src[i];
 	}
 	*new_length = j;
