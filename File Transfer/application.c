@@ -232,16 +232,48 @@ int receive_file(const char *port, const char *destination_folder)
 		return 1;
 	}
 
+	char file_name[param_name->length + 1];
+	memcpy(file_name, param_name->value, param_name->length);
+	file_name[param_name->length] = '\0';
+	char file_path[strlen(destination_folder) + strlen("/") + file_name + 1];
+	strcpy(file_path, destination_folder);
+	strcat(file_path, "/");
+	strcat(file_path, file_name);
+	FILE *fp = fopen(file_path,"w");
+	if (fp == NULL)
+	{
+		perror("Error creating output file: ");
+		return 1;
+	}
+
 	// Read data
-	while (1)
+	unsigned long bytes_read = 0;
+	unsigned char sn = 0;
+	while (bytes_read < size)
 	{
 		data_packet_t data_packet;
 		if (llread(&datalink, buf) < 0) return 1;
 		data_packet.ctrl_field = buf[0];
-		if (data_packet.ctrl_field != PACKET_CTRL_FIELD_DATA) break;
 		data_packet.sn = buf[1];
 		data_packet.length = (buf[2] << 8) | buf[3];
 		data_packet.data = &buf[4];
+		if (data_packet.ctrl_field != PACKET_CTRL_FIELD_DATA)
+		{
+			printf("Error receiving file. Received a control packet instead of a data packet.\n");
+			return 1;
+		}
+		if (data_packet.sn != sn)
+		{
+			printf("Error receiving file. Expected packet number %d but received packet number %d instead.\n", sn, data_packet.sn);
+			return 1;
+		}
+		sn = (unsigned char)(((unsigned)sn + 1) % (1 << sizeof(sn)));
+		if(fwrite(data_packet.data, sizeof(char), data_packet.length, fp) < data_packet.length)
+		{
+			printf("Error writting to output file.\n");
+			return 1;
+		}
+		bytes_read += data_packet.length;
 	}
 
 	if (llclose(&datalink))
