@@ -545,12 +545,12 @@ int send_data_frame(int fd, const frame_t *frame)
 
 	int i;
 	unsigned char bcc2;
-	if (length > 0)
+	if (frame->length > 0)
 	{
-		bcc2 = data[0];
-		for (i = 1; i < length; ++i)
+		bcc2 = frame->buffer[0];
+		for (i = 1; i < frame->length; ++i)
 		{
-			bcc2 ^= data[i];
+			bcc2 ^= frame->buffer[i];
 		}
 	}
 	else bcc2 = 0;
