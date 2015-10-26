@@ -382,7 +382,7 @@ int send_RR(datalink_t *datalink) {
 	frame_t frame;
 	//inc_sequence_number(&datalink->curr_seq_number);
 	frame.sequence_number = datalink->curr_seq_number;
-	frame.control_field = C_RR(datalink->curr_seq_number);
+	frame.control_field = C_RR((datalink->curr_seq_number + 1)%2);
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
