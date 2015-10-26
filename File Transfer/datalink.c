@@ -321,7 +321,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 			printf("ERROR (llwrite): transmission failed (number of attempts to get RR exceeded)\n");
 			continue;
 		}
-		if(invalid_frame(&answer) || frame.control_field != C_RR(datalink->sequence_number)) {
+		if(invalid_frame(&answer) || frame.control_field != C_RR(datalink->curr_seq_number)) {
 			printf("ERROR (llwrite): received invalid frame. Expected valid RR command frame\n");
 			continue;
 		}
