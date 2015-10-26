@@ -397,8 +397,9 @@ int send_REJ(datalink_t *datalink) {
 int send_RR(datalink_t *datalink) {
 	frame_t frame;
 	//inc_sequence_number(&datalink->curr_seq_number);
-	frame.sequence_number = datalink->curr_seq_number;
-	frame.control_field = C_RR((datalink->curr_seq_number + 1)%2);
+	frame.sequence_number = (datalink->curr_seq_number + 0)%2;
+	frame.control_field = C_RR(frame.sequence_number);
+	printf("=============>%d\n", frame.sequence_number);
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
@@ -406,7 +407,7 @@ int send_RR(datalink_t *datalink) {
 }
 
 int llread(datalink_t *datalink, char * buffer) {
-
+	printf("\n\n\n\t%d\n\n\n\n", datalink->curr_seq_number);
 	alrm_info.frame = NULL;
 	alrm_info.tries_left = 0;
 	alrm_info.stop = 0;
