@@ -47,13 +47,12 @@ void alarm_handler() {
 
 	if(alrm_info.tries_left > 0) {
 		alrm_info.tries_left--;
-		printf("Alarm handler is about to send frame...\n");
 		if(send_frame(alrm_info.fd, alrm_info.frame)) {
 			printf("ERROR (alarm_handler): unable to send requested frame\n");
 			return;
 		}
 		alarm(alrm_info.time_dif);
-	} else if(alrm_info.stop) {
+	} else {
 		alrm_info.stop = 2;
 		if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
 			printf("ERROR (alarm_handler): unable to send SIGINT signal.\n");
@@ -185,7 +184,16 @@ int llopen_receiver(int fd) {
 
 	alrm_info.frame = NULL;
 	alrm_info.tries_left = 0;
+	alrm_info.stop = 0;
 	signal(SIGALRM, alarm_handler);
+	/*struct sigaction act;
+	memset (&act, '\0', sizeof(act));
+	//act.sa_sigaction = &alarm_handler;
+	//act.sa_flags = SA_SIGINFO | (SA_RESTART ^ (unsigned)0xFFFFFFFFFF);
+	if (sigaction(SIGTERM, &act, NULL) < 0) {
+		perror ("sigaction");
+		return 1;
+	}*/
 	alarm(15);
 
 	int attempts = INIT_CONNECTION_TRIES;
@@ -221,6 +229,7 @@ int llopen_receiver(int fd) {
 		return 1;
 	}
 
+	alrm_info.stop = 1;
 	return 0;
 }
 
@@ -383,6 +392,7 @@ int llread(datalink_t *datalink, char * buffer) {
 
 	alrm_info.frame = NULL;
 	alrm_info.tries_left = 0;
+	alrm_info.stop = 0;
 	signal(SIGALRM, alarm_handler);
 	alarm(15);
 
@@ -401,17 +411,21 @@ int llread(datalink_t *datalink, char * buffer) {
 		if(check_bcc2(&frame)) {
 			if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
 				send_REJ(datalink);
+				continue;
 			} else {
 				send_RR(datalink);
+				continue;
 			}
 		}
 
+		alrm_info.stop = 1;
 		inc_sequence_number(&datalink->curr_seq_number);
 		send_RR(datalink);
 		memcpy(buffer, frame.buffer, frame.length);
 		return frame.length;
 	}
 
+	alrm_info.stop = 1;
 	printf("ERROR (llread): attempts exceeded\n");
 	return -1;
 
