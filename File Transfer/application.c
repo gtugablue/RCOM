@@ -117,11 +117,12 @@ int send_file(const char *port, const char *file_name)
 
 	// Send data packet
 	unsigned long i;
+	unsigned sn = 0;
 	for (i = 0; i < size; i += MAX_PACKET_SIZE)
 	{
 		data_packet_t data_packet;
 		data_packet.ctrl_field = PACKET_CTRL_FIELD_DATA;
-		data_packet.sn = (char)((unsigned)i % (1 << 8));
+		data_packet.sn = (char)(sn++ % (1 << 8));
 		data_packet.length = MIN(MAX_PACKET_SIZE, size - i);
 		data_packet.data = &data[i];
 		if (send_data_packet(&datalink, &data_packet)) return 1;
@@ -253,9 +254,9 @@ int receive_file(const char *port, const char *destination_folder)
 	unsigned long file_size = strtoul(param_size->value, NULL, 10);
 	while (bytes_read < file_size)
 	{
-		printf("1 - bytes_read: %lu, size: %lu\n", bytes_read, size);
 		data_packet_t data_packet;
 		if (llread(&datalink, buf) < 0) return 1;
+		printf("packet number: %d\n", buf[1]);
 		data_packet.ctrl_field = buf[0];
 		data_packet.sn = buf[1];
 		data_packet.length = (buf[2] << 8) | buf[3];
