@@ -421,9 +421,12 @@ int llread(datalink_t *datalink, char * buffer) {
 			return -1;
 		}
 
+		printf("1\n");
+
 		if(check_bcc1(&frame)) {
 			continue;
 		}
+		printf("=>0x%x\n", frame.control_field);
 
 		if(check_bcc2(&frame)) {
 			if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
@@ -435,12 +438,15 @@ int llread(datalink_t *datalink, char * buffer) {
 			}
 		}
 
+		printf("3\n");
 		alrm_info.stop = 1;
 		inc_sequence_number(&datalink->curr_seq_number);
 		send_RR(datalink);
 		memcpy(buffer, frame.buffer, frame.length);
+		printf("4\n");
 		return frame.length;
 	}
+	printf("5\n");
 
 	alrm_info.stop = 1;
 	printf("ERROR (llread): attempts exceeded\n");
