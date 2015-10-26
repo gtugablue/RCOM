@@ -575,7 +575,7 @@ int get_frame(int fd, frame_t *frame) {
 		printf("ERROR (get_frame): unable to allocate %d bytes of memory\n", 50000);
 		return 1;
 	}
-	unsigned char *buf = malloc(sizeof(char) * 50000));
+	unsigned char *buf = malloc(sizeof(char) * 50000);
 	if(buf == NULL) {
 		printf("ERROR (get_frame): unable to allocate %d bytes of memory\n", 50000);
 		return 1;
@@ -657,7 +657,7 @@ int get_frame(int fd, frame_t *frame) {
 		}
 	}
 
-	if(frame->type = DATA_FRAME && byte_destuffing(buf, buf_length, &frame->buffer, &frame->length)) {
+	if((frame->type == DATA_FRAME) || byte_destuffing(buf, buf_length, &frame->buffer, &frame->length)) {
 		printf("ERROR (get_frame): failed to perform destuffing on DATA frame received\n");
 		return 1;
 	}
