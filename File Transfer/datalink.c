@@ -27,6 +27,7 @@ int check_frame_order(datalink_t *datalink, frame_t *frame);
 
 alarm_info_t alrm_info;
 void alarm_handler() {
+	printf("Alarm handler started.\n");
 	if(alrm_info.stop) {
 		alrm_info.tries_left = 0;
 		return;
@@ -46,6 +47,7 @@ void alarm_handler() {
 
 	if(alrm_info.tries_left > 0) {
 		alrm_info.tries_left--;
+		printf("Alarm handler is about to send frame...\n");
 		if(send_frame(alrm_info.fd, alrm_info.frame)) {
 			printf("ERROR (alarm_handler): unable to send requested frame\n");
 			return;
@@ -312,7 +314,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 		return 1;
 	}
 	memcpy(frame.buffer, buffer, length);
-
+	frame.length = length;
 	frame.control_field = C_DATA(frame.sequence_number);
 	frame.type = DATA_FRAME;
 	frame.address_field = A_TRANSMITTER;
@@ -531,6 +533,7 @@ int send_cmd_frame(int fd, const frame_t *frame)
 
 int send_data_frame(int fd, const frame_t *frame)
 {
+	printf("Sending data frame...\n");
 	unsigned char ctrl = frame->sequence_number << 5;
 	unsigned char fh[] = {FLAG,
 			A_TRANSMITTER,
@@ -553,7 +556,6 @@ int send_data_frame(int fd, const frame_t *frame)
 		}
 	}
 	else bcc2 = 0;
-	printf("bcc2: 0x%X\n", (unsigned)bcc2);
 	unsigned char *bcc2_stuffed;
 	unsigned length2;
 	if (byte_stuffing(&bcc2, sizeof(bcc2), &bcc2_stuffed, &length2)) {
@@ -566,7 +568,6 @@ int send_data_frame(int fd, const frame_t *frame)
 	};
 	if (write(fd, fh, sizeof(fh)) != sizeof(fh)) return 1;
 	if (write(fd, data, length) != length) return 1;
-	if (write(fd, bcc2_stuffed, length2) != length2) return 1;
 	if (write(fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
 	free(data);
 	free(bcc2_stuffed);
