@@ -139,7 +139,7 @@ int send_file(const char *port, const char *file_name)
 int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet)
 {
 	printf("Sending control packet...\n");
-	unsigned size = 4 + 2 * control_packet->num_params;
+	unsigned size = 1 + 2 * control_packet->num_params;
 	unsigned i;
 	for (i = 0; i < control_packet->num_params; ++i)
 	{
@@ -161,6 +161,11 @@ int send_control_packet(datalink_t *datalink, const control_packet_t *control_pa
 		printf("%c ", packet[i]);
 	}
 	printf("\n");
+	for (i = 0; i < size; ++i)
+	{
+		printf("0x%X ", packet[i]);
+	}
+	printf("Sending control packet with size %d.\n", size);
 	if (llwrite(datalink, packet, size))
 	{
 		printf("Error sending control packet.\n");
