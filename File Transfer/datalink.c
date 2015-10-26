@@ -421,14 +421,14 @@ unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
 			printf("ERROR (get_data_frame): unable to get frame, ammount of attempts exceeded\n");
 			return 1;
 		}
-		if(invalid_frame(frame)) {
+		if(invalid_frame(frame) || frame->control_field != BIT(datalink->curr_seq_number)) {
 			printf("ERROR (get_data_frame): received invalid frame. Expected valid DATA frame\n");
 			return 1;
 		}
 
-		if(check_frame_order(datalink, frame)) {
+		/*if(check_frame_order(datalink, frame)) {
 			continue;
-		}
+		}*/
 
 		alrm_info.stop = 1;
 
@@ -569,11 +569,18 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 }
 
 int get_frame(int fd, frame_t *frame) {
-
-	// TODO get_packet must return destuffed frame
 	state_t state = START;
 	unsigned char byte;
-	if ((frame->buffer = malloc(sizeof(char) * 50000)) == NULL) return 1;
+	if ((frame->buffer = malloc(sizeof(char) * 50000)) == NULL) {
+		printf("ERROR (get_frame): unable to allocate %d bytes of memory\n", 50000);
+		return 1;
+	}
+	unsigned char *buf = malloc(sizeof(char) * 50000));
+	if(buf == NULL) {
+		printf("ERROR (get_frame): unable to allocate %d bytes of memory\n", 50000);
+		return 1;
+	}
+	unsigned buf_length = 0;
 
 	while(state != STOP) {
 		int ret = read_byte(fd, &byte);
@@ -634,20 +641,25 @@ int get_frame(int fd, frame_t *frame) {
 			if(byte == ESC) {
 				state = DATA_RCV;
 			} else if(byte == FLAG) {
-				//if(bcc2_checks(&frame)) {
 				state = STOP;
-				//}
 			} else {
-				frame->buffer[frame->length++] = byte;
+				//frame->buffer[frame->length++] = byte;
+				buf[buf_length++] = byte;
 			}
 			break;
 		case DATA_RCV:
-			frame->buffer[frame->length++] = byte;
+			//frame->buffer[frame->length++] = byte;
+			buf[buf_length++] = byte;
 			state = DATA_ESC_RCV;
 			break;
 		case STOP:
 			break;
 		}
+	}
+
+	if(frame->type = DATA_FRAME && byte_destuffing(buf, buf_length, &frame->buffer, &frame->length)) {
+		printf("ERROR (get_frame): failed to perform destuffing on DATA frame received\n");
+		return 1;
 	}
 
 	return 0;
