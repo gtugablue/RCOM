@@ -42,6 +42,7 @@ typedef struct {
 
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet);
 int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet);
+int cli();
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
@@ -184,4 +185,81 @@ int receive_file(const char *port, const char *destination_folder)
 {
 
 	return 0;
+}
+
+int cli(){
+
+		char *mode,*fileName, *port;
+		int tries=3, valid=0;
+
+		mode=malloc(100);
+		fileName=malloc(100);
+		port=malloc(100);
+
+		while(tries-- > 0){
+
+			printf("mode? ");
+	   		scanf("%s", mode);
+
+	   		//verify mode entry
+			if (strcmp(mode,SENDER) == 0 || strcmp(mode,RECEIVER) == 0){
+				valid=1;
+
+				break;
+			}else{
+				perror("Invalid mode.\n");
+				continue;
+			}
+
+
+		}
+
+		if (!valid){
+			perror("Invalid mode.\n");
+			return -1;
+		}
+
+		tries=3;
+		valid=0;
+
+		if (strcmp(mode, SENDER) == 0)
+   			while(tries-- > 0){
+
+				printf("file name? ");
+	   			scanf("%s", fileName);
+
+				   		if(access(fileName,F_OK) == -1)
+				   		   	perror("File does not exist.\n");
+				   		else{
+				   			valid=1;
+				   			break;
+				   		}
+
+	   		}
+
+	   	if (!valid){
+			perror("File does not exist.\n");
+	   		return -1;
+	   	}
+
+
+	   	tries=3;
+	   	valid=0;
+
+	   	while(strcmp(port, PORT) != 0){
+
+	   		printf("Port? ");
+	   		scanf("%s",port);
+
+	   		tries--;
+
+	   		if (tries == 0){
+	   			perror("Invalid port.");
+	   			return -1;
+	   		}
+
+	   	}
+
+
+	return 1;
 }
