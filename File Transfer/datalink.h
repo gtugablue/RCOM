@@ -73,6 +73,7 @@ typedef enum {START,
 #define LLREAD_ANSWER_TRIES 5
 #define LLREAD_ANSWER_RESEND_TIME 1
 #define LLREAD_VALIDMSG_TRIES 5
+#define LLWRITE_ANSWER_TRIES 5
 
 typedef struct {
 	int fd;
