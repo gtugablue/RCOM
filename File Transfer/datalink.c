@@ -20,9 +20,6 @@ int llopen_transmitter(int fd);
 int llopen_receiver(int fd);
 int llclose_transmitter(int fd);
 int llclose_receiver(int fd);
-int llread_first(datalink_t *datalink, char * buffer);
-int llread_middle(datalink_t *datalink, char * buffer);
-int llread_last(datalink_t *datalink, char * buffer);
 unsigned acknowledge_frame(datalink_t *datalink);
 unsigned get_data_frame(datalink_t *datalink, frame_t *frame);
 void inc_sequence_number(unsigned int *seq_num);
@@ -32,6 +29,18 @@ alarm_info_t alrm_info;
 void alarm_handler() {
 	if(alrm_info.stop) {
 		alrm_info.tries_left = 0;
+		return;
+	}
+
+	if(alrm_info.frame == NULL) {
+		if(alrm_info.tries_left > 0)
+			--alrm_info.tries_left;
+		else {
+			if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
+				printf("ERROR (alarm_handler): unable to send SIGINT signal.\n");
+				return;
+			}
+		}
 		return;
 	}
 
@@ -171,6 +180,10 @@ int llopen_transmitter(int fd) {
 }
 
 int llopen_receiver(int fd) {
+
+	alrm_info.frame = NULL;
+	alrm_info.tries_left = 0;
+	alarm(15);
 
 	int attempts = INIT_CONNECTION_TRIES;
 
@@ -342,14 +355,90 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	return 0;
 }
 
+int send_REJ(datalink_t *datalink) {
+	frame_t frame;
+	frame.sequence_number = datalink->curr_seq_number;
+	frame.control_field = C_REJ(datalink->curr_seq_number);
+	frame.type = CMD_FRAME;
+	frame.address_field = A_TRANSMITTER;
+
+	return send_frame(datalink->fd, &frame);
+}
+
+int send_RR(datalink_t *datalink) {
+	frame_t frame;
+	//inc_sequence_number(&datalink->curr_seq_number);
+	frame.sequence_number = datalink->curr_seq_number;
+	frame.control_field = C_RR(datalink->curr_seq_number);
+	frame.type = CMD_FRAME;
+	frame.address_field = A_TRANSMITTER;
+
+	return send_frame(datalink->fd, &frame);
+}
+
 int llread(datalink_t *datalink, char * buffer) {
 
-	switch(datalink->frame_order) {
+	alrm_info.frame = NULL;
+	alrm_info.tries_left = 0;
+	alarm(15);
+
+	frame_t frame;
+	int tries = LLREAD_VALIDMSG_TRIES;
+	while(tries-- > 0) {
+		if(get_frame(datalink->fd, &frame)) {
+			printf("ERROR (llread): unable to get frame\n");
+			return -1;
+		}
+
+		if(check_bcc1(&frame)) {
+			continue;
+		}
+
+		if(check_bcc2(&frame)) {
+			if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
+				send_REJ(datalink);
+			} else {
+				send_RR(datalink);
+			}
+		}
+
+		inc_sequence_number(&datalink->curr_seq_number);
+		send_RR(datalink);
+		memcpy(buffer, frame.buffer, frame.length);
+		return frame.length;
+	}
+
+	printf("ERROR (llread): attempts exceeded\n");
+	return -1;
+
+
+	/*frame_t frame;
+	if(get_data_frame(datalink, &frame)) {
+		printf("ERROR (llread_first): unable to get data frame\n");
+		return -1;
+	}
+	memcpy(buffer, frame.buffer, frame.length);
+	if(acknowledge_frame(datalink)) {
+		printf("ERROR (llread_middle): unable to acknowledge previous frame\n");
+		return -1;
+	}
+	//inc_sequence_number(&datalink->curr_seq_number);
+	return frame.length;*/
+
+	/*frame_t frame;
+	if(get_data_frame(datalink, &frame)) {
+		printf("ERROR (llread_first): unable to get data frame\n");
+		return -1;
+	}
+	memcpy(buffer, frame.buffer, frame.length);
+	return frame.length;*/
+
+	/*switch(datalink->frame_order) {
 	case FIRST:
 		return llread_first(datalink, buffer);
 		break;
 	case MIDDLE:
-		return llread_middle(datalink, buffer);
+		return llread_first(datalink, buffer);
 		break;
 	case LAST:
 		return llread_last(datalink, buffer);
@@ -357,41 +446,7 @@ int llread(datalink_t *datalink, char * buffer) {
 	}
 
 	printf("ERROR (llread): invalid datalink frame order specified\n");
-	return -1;
-}
-
-int llread_first(datalink_t *datalink, char * buffer) {
-	frame_t frame;
-	if(get_data_frame(datalink, &frame)) {
-		printf("ERROR (llread_first): unable to get data frame\n");
-		return -1;
-	}
-	memcpy(buffer, frame.buffer, frame.length);
-	return frame.length;
-}
-
-int llread_middle(datalink_t *datalink, char * buffer) {
-	if(acknowledge_frame(datalink)) {
-		printf("ERROR (llread_middle): unable to acknowledge previous frame\n");
-		return -1;
-	}
-	frame_t frame;
-	if(get_data_frame(datalink, &frame)) {
-		printf("ERROR (llread_middle): unable to get new data frame\n");
-		return -1;
-	}
-
-	memcpy(buffer, frame.buffer, frame.length);
-	return frame.length;
-}
-
-int llread_last(datalink_t *datalink, char * buffer) {
-	if(acknowledge_frame(datalink)) {
-		printf("ERROR (llread_last): unable to acknowledge previous frame\n");
-		return -1;
-	}
-	alrm_info.stop = 1;
-	return 0;
+	return -1;*/
 }
 
 unsigned acknowledge_frame(datalink_t *datalink) {
@@ -426,15 +481,10 @@ unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
 			return 1;
 		}
 
-		printf("2: 0x%02X\n", ORDER_BIT(datalink->curr_seq_number));
-		if(invalid_frame(frame) || frame->control_field != BIT(datalink->curr_seq_number)) {
+		if(invalid_frame(frame) || (frame->control_field != ORDER_BIT(datalink->curr_seq_number))) {
 			printf("ERROR (get_data_frame): received invalid frame. Expected valid DATA frame\n");
 			return 1;
 		}
-
-		/*if(check_frame_order(datalink, frame)) {
-			continue;
-		}*/
 
 		alrm_info.stop = 1;
 
@@ -592,6 +642,7 @@ int get_frame(int fd, frame_t *frame) {
 	}
 	unsigned buf_length = 0;
 	frame->type = DATA_FRAME;
+	frame->bcc2 = 0;
 
 	while(state != STOP) {
 		int ret = read_byte(fd, &byte);
@@ -652,7 +703,10 @@ int get_frame(int fd, frame_t *frame) {
 			if(byte == ESC) {
 				state = DATA_RCV;
 			} else if(byte == FLAG) {
-				state = STOP;
+				if(buf_length == 0)
+					state = FLAG_RCV;
+				else
+					state = STOP;
 			} else {
 				//frame->buffer[frame->length++] = byte;
 				buf[buf_length++] = byte;
@@ -670,20 +724,26 @@ int get_frame(int fd, frame_t *frame) {
 
 	printf("LEAVING\n");
 
+	unsigned char *temp; unsigned int temp_len;
+
 	if(frame->type == DATA_FRAME) {
-		if(byte_destuffing(buf, buf_length, &frame->buffer, &frame->length)) {
+		if(byte_destuffing(buf, buf_length, &temp, &temp_len)) {
 			printf("ERROR (get_frame): failed to perform destuffing on DATA frame received\n");
 			return 1;
 		}
 
-		if(frame->length > 0) {
+		frame->length = temp_len - 1;
+		memcpy(frame->buffer, temp, temp_len - 1);
+		frame->bcc2 = temp[temp_len-1];
+
+		/*if(frame->length > 0) {
 			--frame->length;
 			frame->bcc2 = frame->buffer[frame->length];
 			//printf("fasdfasf 0x%X\n", frame->bcc2);
 			//return 1;
 		} else {
 			frame->bcc2 = 0;
-		}
+		}*/
 	}
 
 	printf("LEFT\n");

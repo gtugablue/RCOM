@@ -46,21 +46,12 @@ int check_bcc1(const frame_t *frame) {
 }
 
 int check_bcc2(const frame_t *frame) {
-
-	printf("FRAME LEN %d\n", frame->length);
-	printf("FRAME BCC2 0x%X\n", frame->bcc2);
-
 	unsigned i;
 	unsigned cumulative_xor = 0;
 
 	for(i = 0; i < frame->length; i++) {
 		cumulative_xor = (cumulative_xor ^ frame->buffer[i]);
-		if(frame->buffer[i] != 0)
-		printf("BUF[%d] 0x%X\n", i, frame->buffer[i]);
 	}
-
-	printf("CUMULATIVE 0x%X\n", cumulative_xor);
-	printf("FRAME BCC2 0x%X\n", frame->bcc2);
 
 	if(cumulative_xor == frame->bcc2)
 		return 0;
