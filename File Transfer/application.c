@@ -33,6 +33,7 @@ typedef struct {
 } control_packet_t;
 
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet);
+int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet);
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 	} else if(strcmp(argv[2], "receive") == 0) {
 		datalink_init(&datalink, RECEIVER);
 		llopen(argv[1], &datalink);
-		unsigned char buf[1000000];
+		char buf[1000000];
 		printf("Reading...\n");
 		llread(&datalink, buf);
 		printf("Read done.\n");
@@ -59,7 +60,6 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 
 int send_file(const char *port, const char *file_name)
 {
-
 	FILE *fp = fopen(file_name, "r");
 	fseek(fp, 0, SEEK_END);
 	unsigned long size = ftell(fp);
@@ -86,6 +86,27 @@ int send_file(const char *port, const char *file_name)
 	return llclose(&datalink);
 }
 
+int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet)
+{
+	unsigned size = 4;
+	unsigned i;
+	for (i = 0; i < control_packet->num_params; ++i)
+	{
+		size += control_packet->params[i].length;
+	}
+	unsigned char packet[size];
+	packet[0] = control_packet->ctrl_field;
+	unsigned j;
+	for (i = 0, j = 1; i < control_packet->num_params; ++i)
+	{
+		packet[j++] = control_packet->params[i].type;
+		packet[j++] = control_packet->params[i].length;
+		memcpy(&packet[j], control_packet->params[i].value, control_packet->params[i].length);
+		j += control_packet->params[i].length;
+	}
+	return llwrite(datalink, packet, size);
+}
+
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 {
 	unsigned size = data_packet->length + 4;
@@ -95,9 +116,7 @@ int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 	packet[2] = (uint8_t)((data_packet->length & 0xFF00) >> 8);
 	packet[3] = (uint8_t)(data_packet->length & 0x00FF);
 	memcpy(&packet[4], data_packet->data, size);
-	if (llwrite(datalink, packet, size) < 0) return 1;
-
-	return 0;
+	return llwrite(datalink, packet, size);
 }
 
 int receive_file(const char *port, const char *destination_folder)
