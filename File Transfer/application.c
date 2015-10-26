@@ -271,7 +271,7 @@ int receive_file(const char *port, const char *destination_folder)
 			printf("Error receiving file. Expected packet number %d but received packet number %d instead.\n", sn, data_packet.sn);
 			return 1;
 		}
-		sn = (unsigned char)(((unsigned)sn + 1) % (1 << sizeof(sn)));
+		sn = (unsigned char)(((unsigned)sn + 1) % (1 << 8));
 		if(fwrite(data_packet.data, sizeof(char), data_packet.length, fp) < data_packet.length)
 		{
 			printf("Error writting to output file.\n");
