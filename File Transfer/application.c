@@ -5,10 +5,14 @@
 #include <string.h>
 #include <math.h>
 #include <libgen.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #define MAX(A, B) (((A) > (B)) ? (A) : (B))
 #define MIN(A, B) (((A) < (B)) ? (A) : (B))
 #define GET_BYTE(X, N) (((X) & (0xFF << (N * 8))) >> (N * 8))
+#define SENDER "sender"
+#define	RECEIVER "receiver"
 
 typedef enum {
 	PACKET_CTRL_TYPE_SIZE,
@@ -189,77 +193,59 @@ int receive_file(const char *port, const char *destination_folder)
 
 int cli(){
 
-		char *mode,*fileName, *port;
-		int tries=3, valid=0;
+	char *mode,*fileName, *port;
+	int tries=3, valid=0;
 
-		mode=malloc(100);
-		fileName=malloc(100);
-		port=malloc(100);
+	mode=malloc(100);
+	fileName=malloc(100);
+	port=malloc(100);
 
+	while(tries-- > 0){
+
+		printf("mode? ");
+		scanf("%s", mode);
+
+		//verify mode entry
+		if (strcmp(mode,SENDER) == 0 || strcmp(mode,RECEIVER) == 0){
+			valid=1;
+
+			break;
+		}else{
+			perror("Invalid mode.\n");
+			continue;
+		}
+
+
+	}
+
+	if (!valid){
+		perror("Invalid mode.\n");
+		return -1;
+	}
+
+	tries=3;
+	valid=0;
+
+	if (strcmp(mode, SENDER) == 0)
 		while(tries-- > 0){
 
-			printf("mode? ");
-	   		scanf("%s", mode);
+			printf("file name? ");
+			scanf("%s", fileName);
 
-	   		//verify mode entry
-			if (strcmp(mode,SENDER) == 0 || strcmp(mode,RECEIVER) == 0){
+			if(access(fileName,F_OK) == -1)
+				perror("File does not exist.\n");
+			else{
 				valid=1;
-
 				break;
-			}else{
-				perror("Invalid mode.\n");
-				continue;
 			}
 
-
 		}
 
-		if (!valid){
-			perror("Invalid mode.\n");
-			return -1;
-		}
-
-		tries=3;
-		valid=0;
-
-		if (strcmp(mode, SENDER) == 0)
-   			while(tries-- > 0){
-
-				printf("file name? ");
-	   			scanf("%s", fileName);
-
-				   		if(access(fileName,F_OK) == -1)
-				   		   	perror("File does not exist.\n");
-				   		else{
-				   			valid=1;
-				   			break;
-				   		}
-
-	   		}
-
-	   	if (!valid){
-			perror("File does not exist.\n");
-	   		return -1;
-	   	}
-
-
-	   	tries=3;
-	   	valid=0;
-
-	   	while(strcmp(port, PORT) != 0){
-
-	   		printf("Port? ");
-	   		scanf("%s",port);
-
-	   		tries--;
-
-	   		if (tries == 0){
-	   			perror("Invalid port.");
-	   			return -1;
-	   		}
-
-	   	}
-
-
+	if (!valid){
+		perror("File does not exist.\n");
+		return -1;
+	}
+	printf("Port? ");
+	scanf("%s",port);
 	return 1;
 }
