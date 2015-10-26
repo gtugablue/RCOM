@@ -239,7 +239,7 @@ int receive_file(const char *port, const char *destination_folder)
 	char file_path[strlen(destination_folder) + strlen(file_name) + 1];
 	strcpy(file_path, destination_folder);
 	strcat(file_path, file_name);
-	FILE *fp = fopen(file_path,"w");
+	FILE *fp = fopen(file_path,"wb");
 	if (fp == NULL)
 	{
 		perror("Error creating output file: ");
