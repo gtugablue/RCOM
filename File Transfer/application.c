@@ -120,7 +120,7 @@ int send_file(const char *port, const char *file_name)
 	{
 		data_packet_t data_packet;
 		data_packet.ctrl_field = PACKET_CTRL_FIELD_DATA;
-		data_packet.sn = i;
+		data_packet.sn = (char)((unsigned)i % (1 << 8));
 		data_packet.length = MIN(MAX_PACKET_SIZE, size - i);
 		data_packet.data = &data[i];
 		if (send_data_packet(&datalink, &data_packet)) return 1;
