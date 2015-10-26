@@ -396,8 +396,7 @@ int send_REJ(datalink_t *datalink) {
 
 int send_RR(datalink_t *datalink) {
 	frame_t frame;
-	//inc_sequence_number(&datalink->curr_seq_number);
-	frame.sequence_number = (datalink->curr_seq_number + 0)%2;
+	frame.sequence_number = datalink->curr_seq_number;
 	frame.control_field = C_RR(frame.sequence_number);
 	printf("=============>%d\n", frame.sequence_number);
 	frame.type = CMD_FRAME;
@@ -422,73 +421,32 @@ int llread(datalink_t *datalink, char * buffer) {
 			return -1;
 		}
 
-		printf("1\n");
-
 		if(check_bcc1(&frame)) {
 			continue;
 		}
-		printf("=>0x%x\n", frame.control_field);
 
 		if(check_bcc2(&frame)) {
 			if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
+				printf("REJ\n");
 				send_REJ(datalink);
 				continue;
 			} else {
+				printf("RR%d\n", datalink->curr_seq_number);
 				send_RR(datalink);
 				continue;
 			}
 		}
 
-		printf("3\n");
 		alrm_info.stop = 1;
 		inc_sequence_number(&datalink->curr_seq_number);
 		send_RR(datalink);
 		memcpy(buffer, frame.buffer, frame.length);
-		printf("4\n");
 		return frame.length;
 	}
-	printf("5\n");
 
 	alrm_info.stop = 1;
 	printf("ERROR (llread): attempts exceeded\n");
 	return -1;
-
-
-	/*frame_t frame;
-	if(get_data_frame(datalink, &frame)) {
-		printf("ERROR (llread_first): unable to get data frame\n");
-		return -1;
-	}
-	memcpy(buffer, frame.buffer, frame.length);
-	if(acknowledge_frame(datalink)) {
-		printf("ERROR (llread_middle): unable to acknowledge previous frame\n");
-		return -1;
-	}
-	//inc_sequence_number(&datalink->curr_seq_number);
-	return frame.length;*/
-
-	/*frame_t frame;
-	if(get_data_frame(datalink, &frame)) {
-		printf("ERROR (llread_first): unable to get data frame\n");
-		return -1;
-	}
-	memcpy(buffer, frame.buffer, frame.length);
-	return frame.length;*/
-
-	/*switch(datalink->frame_order) {
-	case FIRST:
-		return llread_first(datalink, buffer);
-		break;
-	case MIDDLE:
-		return llread_first(datalink, buffer);
-		break;
-	case LAST:
-		return llread_last(datalink, buffer);
-		break;
-	}
-
-	printf("ERROR (llread): invalid datalink frame order specified\n");
-	return -1;*/
 }
 
 unsigned acknowledge_frame(datalink_t *datalink) {
