@@ -81,8 +81,9 @@ int write_timed_frame() {
 int read_byte(int fd, unsigned char *c)
 {
 	int res = read(fd,c,1);
-	if(res >= 1)
-		printf("Read 0x%X\n", + *c);
+	if(res >= 1) {
+		printf("Read 0x%X", + *c);
+	}
 	return res;
 }
 
@@ -660,14 +661,23 @@ int get_frame(int fd, frame_t *frame) {
 	unsigned buf_length = 0;
 	frame->type = DATA_FRAME;
 	frame->bcc2 = 0;
+	char *test[] = {
+			"START",
+			"FLAG_RCV",
+			"A_RCV",
+			"C_RCV",
+			"BCC1_RCV",
+			"DATA_ESC_RCV",
+			"DATA_RCV",
+			"STOP"
+	};
 
 	while(state != STOP) {
+		printf("PREV_STATE: %s\t", test[(int)state]);
 		int ret = read_byte(fd, &byte);
 		if(ret == 0) {
 			return 1;
 		}
-
-		printf("STATE: %d\n", (int)state);
 
 		switch(state) {
 		case START:
@@ -686,7 +696,7 @@ int get_frame(int fd, frame_t *frame) {
 		case A_RCV:
 			if(byte == FLAG) {
 				state = FLAG_RCV;
-			} else if(byte == C_SET || byte == C_UA || byte == C_DISC || C_REJ(0) || C_REJ(1)) {
+			} else if(byte == C_SET || byte == C_UA || byte == C_DISC || byte == C_REJ(0) || byte == C_REJ(1)) {
 				frame->type = CMD_FRAME;
 				frame->control_field = byte;
 				state = C_RCV;
@@ -737,9 +747,10 @@ int get_frame(int fd, frame_t *frame) {
 		case STOP:
 			break;
 		}
+		printf("\tNEXT_STATE: %s\t\n", test[(int)state]);
 	}
 
-	printf("LEAVING\n");
+	printf("\n\tLEAVING State Machine\n\n");
 
 	unsigned char *temp; unsigned int temp_len;
 
@@ -752,18 +763,9 @@ int get_frame(int fd, frame_t *frame) {
 		frame->length = temp_len - 1;
 		memcpy(frame->buffer, temp, temp_len - 1);
 		frame->bcc2 = temp[temp_len-1];
-
-		/*if(frame->length > 0) {
-			--frame->length;
-			frame->bcc2 = frame->buffer[frame->length];
-			//printf("fasdfasf 0x%X\n", frame->bcc2);
-			//return 1;
-		} else {
-			frame->bcc2 = 0;
-		}*/
 	}
 
-	printf("LEFT\n");
+	printf("\n\tLEFT State Machine\n\n");
 
 	return 0;
 }
