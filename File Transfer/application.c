@@ -3,9 +3,17 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
+#include <libgen.h>
 
 #define MAX(A, B) (((A) > (B)) ? (A) : (B))
 #define MIN(A, B) (((A) < (B)) ? (A) : (B))
+#define GET_BYTE(X, N) (((X) & (0xFF << (N * 8))) >> (N * 8))
+
+typedef enum {
+	PACKET_CTRL_TYPE_SIZE,
+	PACKET_CTRL_TYPE_NAME
+} packet_ctrl_type_t;
 
 typedef enum {
 	PACKET_CTRL_FIELD_DATA = 0,
@@ -14,9 +22,9 @@ typedef enum {
 } packet_ctrl_field_t;
 
 typedef struct {
-	unsigned char type;
-	unsigned char length;
-	unsigned char *value;
+	packet_ctrl_type_t type;
+	char length;
+	char *value;
 } control_packet_param_t;
 
 typedef struct {
@@ -45,7 +53,13 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 	datalink_t datalink;
 	if(strcmp(argv[2], "send") == 0) {
 		datalink_init(&datalink, SENDER);
-		if (send_file(argv[1], argv[3])) return 1;
+		if (send_file(argv[1], argv[3]))
+		{
+			printf("Error sending file.\n");
+			return 1;
+		}
+		else
+			printf("File sent successfully.\n");
 	} else if(strcmp(argv[2], "receive") == 0) {
 		datalink_init(&datalink, RECEIVER);
 		llopen(argv[1], &datalink);
@@ -60,6 +74,7 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 
 int send_file(const char *port, const char *file_name)
 {
+	// Read file
 	FILE *fp = fopen(file_name, "r");
 	fseek(fp, 0, SEEK_END);
 	unsigned long size = ftell(fp);
@@ -68,10 +83,38 @@ int send_file(const char *port, const char *file_name)
 	fread(data, size, 1, fp);
 	fclose(fp);
 
+	// Establish connection
 	datalink_t datalink;
 	datalink.mode = SENDER;
 	if (llopen(port, &datalink)) return 1;
 
+	// Send start packet
+	control_packet_t control_packet;
+	control_packet.ctrl_field = PACKET_CTRL_FIELD_START;
+	control_packet.num_params = 2;
+
+	control_packet_param_t param_size;
+	param_size.type = PACKET_CTRL_TYPE_SIZE;
+	char str[(int)((ceil(log10(size)) + 1) * sizeof(char))];
+	if (sprintf(str, "%lu", size) < 0) return 1;
+	param_size.length = strlen(str);
+	param_size.value = str;
+
+	control_packet_param_t param_name;
+	param_name.type = PACKET_CTRL_TYPE_NAME;
+	char copy[strlen(file_name) + 1];
+	strcpy(copy, file_name);
+	char *base = basename(copy);
+	char file[strlen(base) + 1];
+	strcpy(file, base);
+	param_name.length = strlen(file);
+	param_name.value = file;
+
+	control_packet_param_t params[] = {param_size, param_name};
+	control_packet.params = params;
+	if (send_control_packet(&datalink, &control_packet)) return 1;
+
+	// Send data packet
 	unsigned long i;
 	for (i = 0; i < size; i += MAX_PACKET_SIZE)
 	{
@@ -82,6 +125,10 @@ int send_file(const char *port, const char *file_name)
 		data_packet.data = &data[i];
 		if (send_data_packet(&datalink, &data_packet)) return 1;
 	}
+
+	// Send end packet
+	control_packet.ctrl_field = PACKET_CTRL_FIELD_END;
+	if (send_control_packet(&datalink, &control_packet)) return 1;
 
 	return llclose(&datalink);
 }
