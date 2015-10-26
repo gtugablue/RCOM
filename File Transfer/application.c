@@ -33,7 +33,7 @@ typedef struct {
 	packet_ctrl_field_t ctrl_field;
 	unsigned char sn;
 	uint16_t length;
-	unsigned char *data;
+	char *data;
 } data_packet_t;
 
 typedef struct {
@@ -196,13 +196,10 @@ int receive_file(const char *port, const char *destination_folder)
 	// Establish connection
 	datalink_t datalink;
 	datalink_init(&datalink, RECEIVER);
-	printf("a\n");
 	if (llopen(port, &datalink)) return 1;
-	printf("b\n");
 	char buf[MAX_PACKET_SIZE];
 
 	unsigned long size = llread(&datalink, buf);
-	printf("buf size: %d\n", size);
 	if (size < 0)
 	{
 		printf("Error: could not read data.\n");
