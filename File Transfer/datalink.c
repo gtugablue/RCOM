@@ -431,6 +431,7 @@ int llread(datalink_t *datalink, char * buffer) {
 				send_REJ(datalink);
 				continue;
 			} else {
+				printf("BCC2 failed.\n");
 				printf("RR%d\n", datalink->curr_seq_number);
 				send_RR(datalink);
 				continue;
