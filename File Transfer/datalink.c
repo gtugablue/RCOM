@@ -351,10 +351,26 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 			printf("ERROR (llwrite): transmission failed (number of attempts to get RR exceeded)\n");
 			continue;
 		}
-		if(invalid_frame(&answer) || frame.control_field != C_RR(datalink->curr_seq_number)) {
-			printf("ERROR (llwrite): received invalid frame. Expected valid RR command frame\n");
+
+		if(answer.type != CMD_FRAME) {
+			printf("Invalid RR or REJ received\n");
 			continue;
 		}
+
+		if(check_bcc1(&answer)) {
+			printf("Invalid bcc1 in frame received\n");
+			continue;
+		}
+
+		if(answer.control_field != C_RR((datalink->curr_seq_number + 1)%2)) {
+			printf("Inavlid RR value received");
+			continue;
+		}
+
+		/*if(invalid_frame(&answer) || frame.control_field != C_RR(datalink->curr_seq_number)) {
+			printf("ERROR (llwrite): received invalid frame. Expected valid RR command frame\n");
+			continue;
+		}*/
 
 		alrm_info.stop = 1;
 		break;
@@ -405,9 +421,12 @@ int llread(datalink_t *datalink, char * buffer) {
 			return -1;
 		}
 
+		printf("1\n");
+
 		if(check_bcc1(&frame)) {
 			continue;
 		}
+		printf("=>0x%x\n", frame.control_field);
 
 		if(check_bcc2(&frame)) {
 			if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
@@ -419,12 +438,15 @@ int llread(datalink_t *datalink, char * buffer) {
 			}
 		}
 
+		printf("3\n");
 		alrm_info.stop = 1;
 		inc_sequence_number(&datalink->curr_seq_number);
 		send_RR(datalink);
 		memcpy(buffer, frame.buffer, frame.length);
+		printf("4\n");
 		return frame.length;
 	}
+	printf("5\n");
 
 	alrm_info.stop = 1;
 	printf("ERROR (llread): attempts exceeded\n");
