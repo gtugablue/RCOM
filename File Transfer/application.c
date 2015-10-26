@@ -95,7 +95,7 @@ int send_file(const char *port, const char *file_name)
 
 	control_packet_param_t param_size;
 	param_size.type = PACKET_CTRL_TYPE_SIZE;
-	char str[(int)((ceil(log10(size)) + 1) * sizeof(char))];
+	char str[(size == 0) ? (2) : ((int)((ceil(log10(size)) + 1) * sizeof(char)))];
 	if (sprintf(str, "%lu", size) < 0) return 1;
 	param_size.length = strlen(str);
 	param_size.value = str;
