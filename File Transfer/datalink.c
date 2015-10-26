@@ -316,11 +316,6 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	}
 
 	while(attempts-- > 0) {
-		if (send_data_frame(datalink->fd, &frame)) {
-			printf("ERROR (llwrite): unable to send data frame\n");
-			return 1;
-		}
-
 		frame_t answer;
 		if(get_frame(datalink->fd, &answer)) {
 			printf("ERROR (llwrite): get_frame failed\n");
