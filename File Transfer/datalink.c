@@ -675,9 +675,12 @@ int get_frame(int fd, frame_t *frame) {
 			printf("ERROR (get_frame): failed to perform destuffing on DATA frame received\n");
 			return 1;
 		}
+
 		if(frame->length > 0) {
 			--frame->length;
 			frame->bcc2 = frame->buffer[frame->length];
+			//printf("fasdfasf 0x%X\n", frame->bcc2);
+			//return 1;
 		} else {
 			frame->bcc2 = 0;
 		}
