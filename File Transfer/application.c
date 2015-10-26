@@ -44,6 +44,7 @@ typedef struct {
 
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet);
 int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet);
+control_packet_param_t *get_param_by_type(const control_packet_t *control_packet, packet_ctrl_type_t type);
 int cli();
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
@@ -225,6 +226,15 @@ int receive_file(const char *port, const char *destination_folder)
 	}
 	control_packet.num_params = j;
 
+	control_packet_param_t *param_name = get_param_by_type(&control_packet, PACKET_CTRL_TYPE_NAME);
+	control_packet_param_t *param_size = get_param_by_type(&control_packet, PACKET_CTRL_TYPE_SIZE);
+
+	if (param_name == NULL || param_size == NULL)
+	{
+		printf("Error: could not read file header.\n");
+		return 1;
+	}
+
 	// Read data
 	while (1)
 	{
@@ -235,13 +245,7 @@ int receive_file(const char *port, const char *destination_folder)
 		data_packet.sn = buf[1];
 		data_packet.length = (buf[2] << 8) | buf[3];
 		data_packet.data = &buf[4];
-		unsigned v;
-		for (v = 0; v < data_packet.length; ++v)
-		{
-			printf("%c", data_packet.data[v]);
-		}
 	}
-	printf("\n");
 
 	if (llclose(&datalink))
 	{
@@ -254,6 +258,16 @@ int receive_file(const char *port, const char *destination_folder)
 	}
 
 	return 0;
+}
+
+control_packet_param_t *get_param_by_type(const control_packet_t *control_packet, packet_ctrl_type_t type)
+{
+	unsigned i;
+	for (i = 0; i < control_packet->num_params; ++i)
+	{
+		if (control_packet->params[i].type == type) return &control_packet->params[i];
+	}
+	return NULL;
 }
 
 int cli(){
