@@ -351,10 +351,26 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 			printf("ERROR (llwrite): transmission failed (number of attempts to get RR exceeded)\n");
 			continue;
 		}
-		if(invalid_frame(&answer) || frame.control_field != C_RR(datalink->curr_seq_number)) {
-			printf("ERROR (llwrite): received invalid frame. Expected valid RR command frame\n");
+
+		if(answer.type != CMD_FRAME) {
+			printf("Invalid RR or REJ received\n");
 			continue;
 		}
+
+		if(check_bcc1(&answer)) {
+			printf("Invalid bcc1 in frame received\n");
+			continue;
+		}
+
+		if(answer.control_field != C_RR((datalink->curr_seq_number + 1)%2)) {
+			printf("Inavlid RR value received");
+			continue;
+		}
+
+		/*if(invalid_frame(&answer) || frame.control_field != C_RR(datalink->curr_seq_number)) {
+			printf("ERROR (llwrite): received invalid frame. Expected valid RR command frame\n");
+			continue;
+		}*/
 
 		alrm_info.stop = 1;
 		break;
