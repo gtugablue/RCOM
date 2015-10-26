@@ -561,7 +561,7 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 	}
 	*new_length = j - 1;
 	if ((*dst = malloc(*new_length)) == NULL) {
-		printf("ERROR (byte_destuffing): unable to allocate %d bytes of memory\n", j-1);
+		printf("ERROR (byte_destuffing): unable to allocate %d bytes of memory\n", *new_length);
 		return 1;
 	}
 	memcpy(*dst, destuffed, *new_length);
