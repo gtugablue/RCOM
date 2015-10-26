@@ -65,11 +65,7 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 			printf("File sent successfully.\n");
 	} else if(strcmp(argv[2], "receive") == 0) {
 		datalink_init(&datalink, RECEIVER);
-		llopen(argv[1], &datalink);
-		char buf[1000000];
-		printf("Reading...\n");
-		llread(&datalink, buf);
-		printf("Read done.\n");
+		printf("Result: %d\n", receive_file(argv[1], ""));
 		// TODO
 	}
 	return 0;
@@ -88,7 +84,7 @@ int send_file(const char *port, const char *file_name)
 
 	// Establish connection
 	datalink_t datalink;
-	datalink.mode = SENDER;
+	datalink_init(&datalink, SENDER);
 	if (llopen(port, &datalink)) return 1;
 
 	// Send start packet
@@ -196,6 +192,51 @@ int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 
 int receive_file(const char *port, const char *destination_folder)
 {
+	// Establish connection
+	datalink_t datalink;
+	datalink_init(&datalink, RECEIVER);
+	printf("a\n");
+	if (llopen(port, &datalink)) return 1;
+	printf("b\n");
+	char buf[MAX_PACKET_SIZE];
+
+	unsigned long size = llread(&datalink, buf);
+	printf("buf: %s\n", buf);
+	if (size < 0)
+	{
+		printf("Error: could not read data.\n");
+		return 1;
+	}
+
+	// Read start packet
+	control_packet_t control_packet;
+	unsigned i = 0;
+	control_packet.ctrl_field = buf[i++];
+	control_packet.num_params = buf[i++];
+	control_packet_param_t params[control_packet.num_params];
+	unsigned j;
+	for (j = 0; j < control_packet.num_params; ++j)
+	{
+		params[j].type = buf[i++];
+		params[j].length = buf[i++];
+		char *value;
+		printf("c %d\n", params[j].length);
+		if ((value = malloc(params[j].length)) == NULL) return 1;
+		printf("d\n");
+		memcpy(value, &buf[i], params[j].length);
+		i += params[j].length;
+	}
+
+	if (llclose(&datalink))
+	{
+		printf("Could not close connection properly.\n");
+	}
+
+	for (i = 0; i < control_packet.num_params; ++i)
+	{
+		free(params[i].value);
+	}
+	printf("Name: %s\n", params[i].value);
 
 	return 0;
 }
