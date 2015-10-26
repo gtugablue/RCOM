@@ -49,6 +49,7 @@ int cli();
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
+	if (argc == 1) return cli();
 	if (argc != 4)
 	{
 		printf("Usage: %s <port> <send|receive> <filename>\n", argv[0]);
@@ -277,6 +278,16 @@ int receive_file(const char *port, const char *destination_folder)
 		}
 		bytes_read += data_packet.length;
 		printf("2 - bytes_read: %lu, size: %lu\n", bytes_read, size);
+	}
+
+	// Read end packet
+	size = llread(&datalink, buf);
+	i = 0;
+	control_packet.ctrl_field = buf[i++];
+	if (control_packet.ctrl_field != PACKET_CTRL_FIELD_END)
+	{
+		printf("Error receiving file. Was expecting an end packet but received a different one instead.\n");
+		return 1;
 	}
 
 	if (llclose(&datalink))
