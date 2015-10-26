@@ -49,6 +49,7 @@ int cli();
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
+	if (argc == 1) return cli();
 	if (argc != 4)
 	{
 		printf("Usage: %s <port> <send|receive> <filename>\n", argv[0]);
