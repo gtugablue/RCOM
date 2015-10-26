@@ -53,7 +53,13 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 	datalink_t datalink;
 	if(strcmp(argv[2], "send") == 0) {
 		datalink_init(&datalink, SENDER);
-		if (send_file(argv[1], argv[3])) return 1;
+		if (send_file(argv[1], argv[3]))
+		{
+			printf("Error sending file.\n");
+			return 1;
+		}
+		else
+			printf("File sent successfully.\n");
 	} else if(strcmp(argv[2], "receive") == 0) {
 		datalink_init(&datalink, RECEIVER);
 		llopen(argv[1], &datalink);
