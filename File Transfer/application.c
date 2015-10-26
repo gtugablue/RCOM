@@ -25,7 +25,7 @@ typedef enum {
 
 typedef struct {
 	packet_ctrl_type_t type;
-	char length;
+	unsigned char length;
 	char *value;
 } control_packet_param_t;
 
@@ -201,7 +201,7 @@ int receive_file(const char *port, const char *destination_folder)
 	char buf[MAX_PACKET_SIZE];
 
 	unsigned long size = llread(&datalink, buf);
-	printf("buf: %s\n", buf);
+	printf("buf size: %d\n", size);
 	if (size < 0)
 	{
 		printf("Error: could not read data.\n");
@@ -210,22 +210,38 @@ int receive_file(const char *port, const char *destination_folder)
 
 	// Read start packet
 	control_packet_t control_packet;
-	unsigned i = 0;
+	unsigned long i = 0;
 	control_packet.ctrl_field = buf[i++];
-	control_packet.num_params = buf[i++];
-	control_packet_param_t params[control_packet.num_params];
-	unsigned j;
-	for (j = 0; j < control_packet.num_params; ++j)
+	control_packet_param_t params[MAX_PACKET_SIZE];
+	unsigned long j;
+
+	for (j = 0; i < size; ++j)
 	{
 		params[j].type = buf[i++];
 		params[j].length = buf[i++];
-		char *value;
-		printf("c %d\n", params[j].length);
-		if ((value = malloc(params[j].length)) == NULL) return 1;
-		printf("d\n");
-		memcpy(value, &buf[i], params[j].length);
+		if ((params[j].value = malloc(params[j].length)) == NULL) return 1;
+		memcpy(params[j].value, &buf[i], params[j].length);
 		i += params[j].length;
 	}
+	control_packet.num_params = j;
+
+	// Read data
+	while (1)
+	{
+		data_packet_t data_packet;
+		if (llread(&datalink, buf) < 0) return 1;
+		data_packet.ctrl_field = buf[0];
+		if (data_packet.ctrl_field != PACKET_CTRL_FIELD_DATA) break;
+		data_packet.sn = buf[1];
+		data_packet.length = (buf[2] << 8) | buf[3];
+		data_packet.data = &buf[4];
+		unsigned v;
+		for (v = 0; v < data_packet.length; ++v)
+		{
+			printf("%c", data_packet.data[v]);
+		}
+	}
+	printf("\n");
 
 	if (llclose(&datalink))
 	{
@@ -236,7 +252,6 @@ int receive_file(const char *port, const char *destination_folder)
 	{
 		free(params[i].value);
 	}
-	printf("Name: %s\n", params[i].value);
 
 	return 0;
 }
