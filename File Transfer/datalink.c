@@ -508,6 +508,7 @@ int send_data_frame(int fd, const frame_t *frame)
 		}
 	}
 	else bcc2 = 0;
+	printf("bcc2: 0x%X\n", (unsigned)bcc2);
 	unsigned char *bcc2_stuffed;
 	unsigned length2;
 	if (byte_stuffing(&bcc2, sizeof(bcc2), &bcc2_stuffed, &length2)) {

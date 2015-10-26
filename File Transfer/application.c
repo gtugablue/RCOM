@@ -139,11 +139,12 @@ int send_file(const char *port, const char *file_name)
 int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet)
 {
 	printf("Sending control packet...\n");
-	unsigned size = 4;
+	unsigned size = 4 + 2 * control_packet->num_params;
 	unsigned i;
 	for (i = 0; i < control_packet->num_params; ++i)
 	{
 		size += control_packet->params[i].length;
+		printf("length: %d\n", control_packet->params[i].length);
 	}
 	unsigned char packet[size];
 	packet[0] = control_packet->ctrl_field;
@@ -155,6 +156,11 @@ int send_control_packet(datalink_t *datalink, const control_packet_t *control_pa
 		memcpy(&packet[j], control_packet->params[i].value, control_packet->params[i].length);
 		j += control_packet->params[i].length;
 	}
+	for (i = 0; i < size; ++i)
+	{
+		printf("%c ", packet[i]);
+	}
+	printf("\n");
 	if (llwrite(datalink, packet, size))
 	{
 		printf("Error sending control packet.\n");
