@@ -11,8 +11,6 @@
 #define MAX(A, B) (((A) > (B)) ? (A) : (B))
 #define MIN(A, B) (((A) < (B)) ? (A) : (B))
 #define GET_BYTE(X, N) (((X) & (0xFF << (N * 8))) >> (N * 8))
-#define SENDER "sender"
-#define	RECEIVER "receiver"
 
 typedef enum {
 	PACKET_CTRL_TYPE_SIZE,
@@ -206,7 +204,7 @@ int cli(){
 		scanf("%s", mode);
 
 		//verify mode entry
-		if (strcmp(mode,SENDER) == 0 || strcmp(mode,RECEIVER) == 0){
+		if (strcmp(mode,"sender") == 0 || strcmp(mode,"receive") == 0){
 			valid=1;
 
 			break;
@@ -226,7 +224,7 @@ int cli(){
 	tries=3;
 	valid=0;
 
-	if (strcmp(mode, SENDER) == 0)
+	if (strcmp(mode, "sender") == 0)
 		while(tries-- > 0){
 
 			printf("file name? ");
