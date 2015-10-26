@@ -71,12 +71,6 @@ int write_timed_frame() {
 int read_byte(int fd, unsigned char *c)
 {
 	int res = read(fd,c,1);
-	/*if (res != 1)
-	{
-		printf("Error reading from the serial port.\n");
-		return 1;
-	}*/
-	printf("Read %d bytes\n", res);
 	if(res >= 1)
 		printf("Read 0x%X\n", + *c);
 	return res;

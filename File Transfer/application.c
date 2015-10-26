@@ -152,7 +152,13 @@ int send_control_packet(datalink_t *datalink, const control_packet_t *control_pa
 		memcpy(&packet[j], control_packet->params[i].value, control_packet->params[i].length);
 		j += control_packet->params[i].length;
 	}
-	return llwrite(datalink, packet, size);
+	if (llwrite(datalink, packet, size))
+	{
+		printf("Error sending control packet.\n");
+		return 1;
+	}
+	printf("Sent control packet with size %d.\n", size);
+	return 0;
 }
 
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
@@ -165,10 +171,17 @@ int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 	packet[2] = (uint8_t)((data_packet->length & 0xFF00) >> 8);
 	packet[3] = (uint8_t)(data_packet->length & 0x00FF);
 	memcpy(&packet[4], data_packet->data, size);
-	return llwrite(datalink, packet, size);
+	if (llwrite(datalink, packet, size))
+	{
+		printf("Error data control packet.\n");
+		return 1;
+	}
+	printf("Sent data packet with size %d.\n", size);
+	return 0;
 }
 
 int receive_file(const char *port, const char *destination_folder)
 {
+
 	return 0;
 }
