@@ -222,6 +222,7 @@ int receive_file(const char *port, const char *destination_folder)
 		i += params[j].length;
 	}
 	control_packet.num_params = j;
+	control_packet.params = params;
 
 	control_packet_param_t *param_name = get_param_by_type(&control_packet, PACKET_CTRL_TYPE_NAME);
 	control_packet_param_t *param_size = get_param_by_type(&control_packet, PACKET_CTRL_TYPE_SIZE);
