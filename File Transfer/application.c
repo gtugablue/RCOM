@@ -235,7 +235,7 @@ int receive_file(const char *port, const char *destination_folder)
 	char file_name[param_name->length + 1];
 	memcpy(file_name, param_name->value, param_name->length);
 	file_name[param_name->length] = '\0';
-	char file_path[strlen(destination_folder) + strlen("/") + file_name + 1];
+	char file_path[strlen(destination_folder) + strlen("/") + strlen(file_name) + 1];
 	strcpy(file_path, destination_folder);
 	strcat(file_path, "/");
 	strcat(file_path, file_name);
