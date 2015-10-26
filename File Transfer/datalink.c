@@ -540,9 +540,9 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 		else
 			stuffed[j] = src[i];
 	}
-	*new_length = j - 1;
+	*new_length = j;
 	if ((*dst = malloc(*new_length)) == NULL) {
-		printf("ERROR (byte_stuffing): unable to allocate %d bytes of memory\n", j-1);
+		printf("ERROR (byte_stuffing): unable to allocate %d bytes of memory\n", *new_length);
 		return 1;
 	}
 	memcpy(*dst, stuffed, *new_length);
@@ -559,7 +559,7 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 		if(src[i] != ESC)
 			destuffed[j] = src[i];
 	}
-	*new_length = j - 1;
+	*new_length = j;
 	if ((*dst = malloc(*new_length)) == NULL) {
 		printf("ERROR (byte_destuffing): unable to allocate %d bytes of memory\n", *new_length);
 		return 1;
