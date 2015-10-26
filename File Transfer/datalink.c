@@ -551,6 +551,7 @@ int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst
 
 int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length)
 {
+	printf("1\n");
 	unsigned char destuffed[length];
 	unsigned i;
 	unsigned j;
@@ -559,12 +560,15 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 		if(src[i] != ESC)
 			destuffed[j] = src[i];
 	}
+	printf("2\n");
 	*new_length = j - 1;
 	if ((*dst = malloc(*new_length)) == NULL) {
 		printf("ERROR (byte_destuffing): unable to allocate %d bytes of memory\n", j-1);
 		return 1;
 	}
+	printf("=> %d\n", *new_length);
 	memcpy(*dst, destuffed, *new_length);
+	printf("4\n");
 	return 0;
 }
 
@@ -581,6 +585,7 @@ int get_frame(int fd, frame_t *frame) {
 		return 1;
 	}
 	unsigned buf_length = 0;
+	frame->type = DATA_FRAME;
 
 	while(state != STOP) {
 		int ret = read_byte(fd, &byte);
@@ -657,10 +662,16 @@ int get_frame(int fd, frame_t *frame) {
 		}
 	}
 
-	if((frame->type == DATA_FRAME) || byte_destuffing(buf, buf_length, &frame->buffer, &frame->length)) {
-		printf("ERROR (get_frame): failed to perform destuffing on DATA frame received\n");
-		return 1;
+	printf("LEAVING\n");
+
+	if(frame->type == DATA_FRAME) {
+		if(byte_destuffing(buf, buf_length, &frame->buffer, &frame->length)) {
+			printf("ERROR (get_frame): failed to perform destuffing on DATA frame received\n");
+			return 1;
+		}
 	}
+
+	printf("LEFT\n");
 
 	return 0;
 }
