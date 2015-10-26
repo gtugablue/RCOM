@@ -310,7 +310,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	alrm_info.frame = &frame;
 	alrm_info.stop = 0;
 
-	if(write_timed_message()) {
+	if(write_timed_frame()) {
 		printf("ERROR (llwrite): unable to start alarms\n");
 		return 1;
 	}
