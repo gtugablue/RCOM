@@ -438,6 +438,13 @@ int llread(datalink_t *datalink, char * buffer) {
 			}
 		}
 
+		if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
+			printf("BCC2 failed.\n");
+			printf("RR%d\n", datalink->curr_seq_number);
+			send_RR(datalink);
+			continue;
+		}
+
 		alrm_info.stop = 1;
 		inc_sequence_number(&datalink->curr_seq_number);
 		send_RR(datalink);
