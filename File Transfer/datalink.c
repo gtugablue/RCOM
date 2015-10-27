@@ -405,8 +405,8 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	frame.address_field = A_TRANSMITTER;
 
 	alrm_info.datalink = datalink;
-	alrm_info.tries_left = INIT_CONNECTION_TRIES;
-	alrm_info.time_dif = INIT_CONNECTION_RESEND_TIME;
+	alrm_info.tries_left = LLWRITE_ANSWER_TRIES;
+	alrm_info.time_dif = LLWRITE_ANSWER_TIMEOUT;
 	alrm_info.frame = &frame;
 	alrm_info.stop = 0;
 
