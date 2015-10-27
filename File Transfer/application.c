@@ -45,6 +45,7 @@ typedef struct {
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet);
 int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet);
 control_packet_param_t *get_param_by_type(const control_packet_t *control_packet, packet_ctrl_type_t type);
+void show_progress_bar(float progress);
 int cli();
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
@@ -254,11 +255,11 @@ int receive_file(const char *port, const char *destination_folder)
 	unsigned long bytes_read = 0;
 	unsigned char sn = 0;
 	unsigned long file_size = strtoul(param_size->value, NULL, 10);
+	show_progress_bar(0);
 	while (bytes_read < file_size)
 	{
 		data_packet_t data_packet;
 		if (llread(&datalink, buf) < 0) return 1;
-		printf("packet number: %d\n", (unsigned char)buf[1]);
 		data_packet.ctrl_field = buf[0];
 		data_packet.sn = buf[1];
 		data_packet.length = (buf[2] << 8) | buf[3];
@@ -280,7 +281,7 @@ int receive_file(const char *port, const char *destination_folder)
 			return 1;
 		}
 		bytes_read += data_packet.length;
-		printf("2 - bytes_read: %lu, size: %lu\n", bytes_read, size);
+		show_progress_bar((float)bytes_read / file_size);
 	}
 
 	// Read end packet
@@ -304,6 +305,21 @@ int receive_file(const char *port, const char *destination_folder)
 	}
 
 	return 0;
+}
+
+void show_progress_bar(float progress)
+{
+	unsigned width = 30;
+	unsigned i;
+	printf("[");
+	for (i = 0; i < width; ++i)
+	{
+		if (i < progress * width)
+			printf("=");
+		else
+			printf(" ");
+	}
+	printf("] %.2f%%\n", progress * 100);
 }
 
 control_packet_param_t *get_param_by_type(const control_packet_t *control_packet, packet_ctrl_type_t type)
