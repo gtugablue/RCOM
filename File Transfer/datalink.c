@@ -43,6 +43,7 @@ void alarm_handler() {
 		alrm_info.tries_left = 0;
 		return;
 	}
+	++alrm_info.datalink->num_timeouts;
 
 	if(alrm_info.frame == NULL) {
 		if(alrm_info.tries_left > 0)
@@ -178,11 +179,13 @@ int llclose(datalink_t *datalink) {
 
 void show_stats(datalink_t *datalink)
 {
+	printf("\n");
 	printf("----------- STATISTICS -----------\n");
 	printf("Number of sent data frames: %d\n", datalink->num_sent_data_frames);
 	printf("Number of received data frames: %d\n", datalink->num_received_data_frames);
 	printf("Number of timeouts: %d\n", datalink->num_timeouts);
 	printf("Number of received REJs: %d\n", datalink->num_received_REJs);
+	printf("----------------------------------\n");
 	printf("\n");
 }
 
