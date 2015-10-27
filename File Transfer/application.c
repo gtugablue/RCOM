@@ -50,8 +50,6 @@ int cli();
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
-	printf("0x%X\n", 0x0 ^ 0x9 ^ 0x0 ^ 0x14 ^ 0xb5 ^ 0x9f ^ 0xbb ^ 0x79 ^ 0xd ^ 0x82 ^ 0xff ^ 0xfd ^ 0xbf ^ 0xff ^ 0xf7 ^ 0x63 ^ 0xe1 ^ 0xd3 ^ 0xe ^ 0x67 ^ 0x7d ^ 0x5a ^ 0xfc ^ 0x5f);
-
 	if (argc == 1) return cli();
 	if (argc != 4)
 	{
@@ -151,7 +149,6 @@ int send_control_packet(datalink_t *datalink, const control_packet_t *control_pa
 	for (i = 0; i < control_packet->num_params; ++i)
 	{
 		size += control_packet->params[i].length;
-		printf("length: %d\n", control_packet->params[i].length);
 	}
 	unsigned char packet[size];
 	packet[0] = control_packet->ctrl_field;
@@ -163,16 +160,7 @@ int send_control_packet(datalink_t *datalink, const control_packet_t *control_pa
 		memcpy(&packet[j], control_packet->params[i].value, control_packet->params[i].length);
 		j += control_packet->params[i].length;
 	}
-	for (i = 0; i < size; ++i)
-	{
-		printf("%c ", packet[i]);
-	}
-	printf("\n");
-	for (i = 0; i < size; ++i)
-	{
-		printf("0x%X ", packet[i]);
-	}
-	printf("Sending control packet with size %d.\n", size);
+
 	if (llwrite(datalink, packet, size))
 	{
 		printf("Error sending control packet.\n");
@@ -184,7 +172,7 @@ int send_control_packet(datalink_t *datalink, const control_packet_t *control_pa
 
 int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 {
-	printf("Sending data packet...\n");
+	printf("Sending data packet number %d ...\n", data_packet->sn);
 	unsigned size = data_packet->length + 4;
 	unsigned char packet[size];
 	packet[0] = data_packet->ctrl_field;
@@ -197,7 +185,6 @@ int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet)
 		printf("Error data control packet.\n");
 		return 1;
 	}
-	printf("Sent data packet with size %d.\n", size);
 	return 0;
 }
 
