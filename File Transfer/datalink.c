@@ -651,8 +651,6 @@ int get_frame(int fd, frame_t *frame) {
 			"A_RCV",
 			"C_RCV",
 			"BCC1_RCV",
-			"DATA_ESC_RCV",
-			"DATA_RCV",
 			"STOP"
 	};
 
@@ -694,7 +692,6 @@ int get_frame(int fd, frame_t *frame) {
 			break;
 		case C_RCV:
 		{
-			//unsigned char bcc1 = frame->address_field ^ frame->control_field;
 			state = BCC1_RCV;
 			frame->bcc1 = byte;
 			break;
