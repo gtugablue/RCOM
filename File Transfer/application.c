@@ -51,9 +51,9 @@ int cli();
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
 	if (argc == 1) return cli();
-	if (argc != 4)
+	if (argc != 4 && argc != 3)
 	{
-		printf("Usage: %s <port> <send|receive> <filename>\n", argv[0]);
+		printf("Usage: %s <port> <send|receive> <src_filename|destination_folder>\n", argv[0]);
 		return 1;
 	}
 	datalink_t datalink;
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 			printf("File sent successfully.\n");
 	} else if(strcmp(argv[2], "receive") == 0) {
 		datalink_init(&datalink, RECEIVER);
-		printf("Result: %d\n", receive_file(argv[1], ""));
+		printf("Result: %d\n", receive_file(argv[1], argc == 4 ? argv[3] : ""));
 		// TODO
 	}
 	return 0;
@@ -338,11 +338,11 @@ int cli(){
 
 	while(tries-- > 0){
 
-		printf("mode? ");
+		printf("Mode (send/receive)? ");
 		scanf("%s", mode);
 
 		//verify mode entry
-		if (strcmp(mode,"sender") == 0 || strcmp(mode,"receive") == 0){
+		if (strcmp(mode,"send") == 0 || strcmp(mode,"receive") == 0){
 			valid=1;
 
 			break;
@@ -362,10 +362,10 @@ int cli(){
 	tries=3;
 	valid=0;
 
-	if (strcmp(mode, "sender") == 0)
+	if (strcmp(mode, "send") == 0)
 		while(tries-- > 0){
 
-			printf("file name? ");
+			printf("File name? ");
 			scanf("%s", fileName);
 
 			if(access(fileName,F_OK) == -1)
@@ -383,5 +383,9 @@ int cli(){
 	}
 	printf("Port? ");
 	scanf("%s",port);
-	return 1;
+
+	if (strcmp(mode, "send") == 0)
+		return send_file(port, fileName);
+	else
+		return receive_file(port);
 }
