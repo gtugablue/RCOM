@@ -258,7 +258,7 @@ int receive_file(const char *port, const char *destination_folder)
 	{
 		data_packet_t data_packet;
 		if (llread(&datalink, buf) < 0) return 1;
-		printf("packet number: %d\n", buf[1]);
+		printf("packet number: %d\n", (unsigned char)buf[1]);
 		data_packet.ctrl_field = buf[0];
 		data_packet.sn = buf[1];
 		data_packet.length = (buf[2] << 8) | buf[3];
