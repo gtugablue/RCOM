@@ -472,12 +472,12 @@ int llread(datalink_t *datalink, char * buffer) {
 			}
 		}
 
-		if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
+		/*if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
 			printf("BCC2 failed.\n");
 			printf("RR%d\n", datalink->curr_seq_number);
 			send_RR(datalink);
 			continue;
-		}
+		}*/
 
 		alrm_info.stop = 1;
 		inc_sequence_number(&datalink->curr_seq_number);
@@ -767,7 +767,6 @@ int get_frame(int fd, frame_t *frame) {
 		frame->length = temp_len - 1;
 		memcpy(frame->buffer, temp, temp_len - 1);
 		frame->bcc2 = temp[temp_len-1];
-		//printf("bcc2 received: 0x%X\n", frame->bcc2);
 	}
 
 	//printf("\n\tLEFT State Machine\n\n");
