@@ -43,7 +43,9 @@ void alarm_handler() {
 		alrm_info.tries_left = 0;
 		return;
 	}
-	++alrm_info.datalink->num_timeouts;
+
+	if(alrm_info.datalink != NULL)
+		++alrm_info.datalink->num_timeouts;
 
 	if(alrm_info.frame == NULL) {
 		if(alrm_info.tries_left > 0)
