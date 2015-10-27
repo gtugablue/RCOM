@@ -80,6 +80,11 @@ int send_file(const char *port, const char *file_name)
 {
 	// Read file
 	FILE *fp = fopen(file_name, "r");
+	if (fp == NULL)
+	{
+		perror("Error opening file");
+		return 1;
+	}
 	fseek(fp, 0, SEEK_END);
 	unsigned long size = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
