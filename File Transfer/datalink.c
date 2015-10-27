@@ -678,14 +678,14 @@ int get_frame(int fd, frame_t *frame) {
 	unsigned buf_length = 0;
 	frame->type = DATA_FRAME;
 	frame->bcc2 = 0;
-	char *test[] = {
+	/*char *test[] = {
 			"START",
 			"FLAG_RCV",
 			"A_RCV",
 			"C_RCV",
 			"BCC1_RCV",
 			"STOP"
-	};
+	};*/
 
 	while(state != STOP) {
 		//printf("PREV_STATE: %s\t", test[(int)state]);
