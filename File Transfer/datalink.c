@@ -596,10 +596,11 @@ int send_data_frame(int fd, const frame_t *frame)
 		return 1;
 	}
 
-	unsigned char ft[] = {FLAG};
+	unsigned char ft[] = {*bcc2_stuffed,
+			FLAG
+	};
 	if (write(fd, fh, sizeof(fh)) != sizeof(fh)) return 1;
 	if (write(fd, data, length) != length) return 1;
-	if (write(fd, bcc2_stuffed, length2) != length2) return 1;
 	if (write(fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
 	free(data);
 	free(bcc2_stuffed);
