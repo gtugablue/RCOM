@@ -46,6 +46,7 @@ int send_data_packet(datalink_t *datalink, const data_packet_t *data_packet);
 int send_control_packet(datalink_t *datalink, const control_packet_t *control_packet);
 control_packet_param_t *get_param_by_type(const control_packet_t *control_packet, packet_ctrl_type_t type);
 void show_progress_bar(float progress);
+void print_usage(char *argv0);
 int cli();
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
@@ -53,11 +54,16 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 	if (argc == 1) return cli();
 	if (argc != 4 && argc != 3)
 	{
-		printf("Usage: %s <port> <send|receive> <src_filename|destination_folder>\n", argv[0]);
+		print_usage(argv[0]);
 		return 1;
 	}
 	datalink_t datalink;
 	if(strcmp(argv[2], "send") == 0) {
+		if (argc != 4)
+		{
+			print_usage(argv[0]);
+			return 1;
+		}
 		datalink_init(&datalink, SENDER);
 		if (send_file(argv[1], argv[3]))
 		{
@@ -67,11 +73,24 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 		else
 			printf("File sent successfully.\n");
 	} else if(strcmp(argv[2], "receive") == 0) {
+		if (argc != 3)
+		{
+			print_usage(argv[0]);
+			return 1;
+		}
 		datalink_init(&datalink, RECEIVER);
 		printf("Result: %d\n", receive_file(argv[1], argc == 4 ? argv[3] : ""));
 		// TODO
 	}
 	return 0;
+}
+
+void print_usage(char *argv0)
+{
+	printf("Usage:\n"
+			"\t%s <port> send <filename>\n"
+			"\t\tOR\n"
+			"\t%s <port> receive\n", argv0, argv0);
 }
 
 int send_file(const char *port, const char *file_name)
