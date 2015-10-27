@@ -7,17 +7,26 @@
 #include "serial.h"
 #include "frame_validator.h"
 
-int send_cmd_frame(int fd, const frame_t *frame);
-int send_data_frame(int fd, const frame_t *frame);
+typedef struct {
+	datalink_t *datalink;
+	unsigned int tries_left;
+	unsigned int time_dif;
+	frame_t *frame;
+	unsigned int stop;
+} alarm_info_t;
+
+int send_cmd_frame(datalink_t *datalink, const frame_t *frame);
+int send_data_frame(datalink_t *datalink, const frame_t *frame);
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
-int get_frame(int fd, frame_t *frame);
+int get_frame(datalink_t *datalink, frame_t *frame);
 int byte_stuffing(const unsigned char *src, unsigned length, unsigned char **dst, unsigned *new_length);
 int write_timed_frame();
 void alarm_handler();
-int send_frame(int fd, const frame_t *frame);
-int llopen_transmitter(int fd);
-int llopen_receiver(int fd);
+int send_frame(datalink_t *datalink, const frame_t *frame);
+void show_stats(datalink_t *datalink);
+int llopen_transmitter(datalink_t *datalink);
+int llopen_receiver(datalink_t *datalink);
 int llclose_transmitter(datalink_t *datalink);
 int llclose_receiver(datalink_t *datalink);
 unsigned acknowledge_frame(datalink_t *datalink);
@@ -51,7 +60,7 @@ void alarm_handler() {
 
 	if(alrm_info.tries_left > 0) {
 		alrm_info.tries_left--;
-		if(send_frame(alrm_info.fd, alrm_info.frame)) {
+		if(send_frame(alrm_info.datalink, alrm_info.frame)) {
 			printf("ERROR (alarm_handler): unable to send requested frame\n");
 			return;
 		}
@@ -80,7 +89,7 @@ int write_timed_frame() {
 	sigaction(SIGALRM, &sa, NULL);
 
 	//signal(SIGALRM, alarm_handler);
-	if(send_frame(alrm_info.fd, alrm_info.frame)) {
+	if(send_frame(alrm_info.datalink, alrm_info.frame)) {
 		printf("ERROR (write_timed_frame): send_frame failed.\n");
 		return 1;
 	}
@@ -104,6 +113,12 @@ void datalink_init(datalink_t *datalink, unsigned int mode) {
 	datalink->repeat = 0;
 	datalink->frame_order = FIRST;
 	datalink->fd = -1;
+
+	datalink->num_sent_data_frames = 0;
+	datalink->num_received_data_frames = 0;
+	datalink->num_timeouts = 0;
+	datalink->num_sent_REJs = 0;
+	datalink->num_received_REJs = 0;
 }
 
 int llopen(const char *filename, datalink_t *datalink) {
@@ -118,13 +133,13 @@ int llopen(const char *filename, datalink_t *datalink) {
 
 	switch(datalink->mode) {
 	case SENDER:
-		if(llopen_transmitter(serial_fd)) {
+		if(llopen_transmitter(datalink)) {
 			printf("ERROR (llopen): llopen_transmitter failed\n");
 			return 1;
 		}
 		break;
 	case RECEIVER:
-		if(llopen_receiver(serial_fd)) {
+		if(llopen_receiver(datalink)) {
 			printf("ERROR (llopen): llopen_receiver failed\n");
 			return 1;
 		}
@@ -156,17 +171,29 @@ int llclose(datalink_t *datalink) {
 		//return 1;
 	}
 
+	show_stats(datalink);
+
 	return serial_terminate(datalink->fd);
 }
 
-int llopen_transmitter(int fd) {
+void show_stats(datalink_t *datalink)
+{
+	printf("----------- STATISTICS -----------\n");
+	printf("Number of sent data frames: %d\n", datalink->num_sent_data_frames);
+	printf("Number of received data frames: %d\n", datalink->num_received_data_frames);
+	printf("Number of timeouts: %d\n", datalink->num_timeouts);
+	printf("Number of received REJs: %d\n", datalink->num_received_REJs);
+	printf("\n");
+}
+
+int llopen_transmitter(datalink_t *datalink) {
 	frame_t frame;
 	frame.sequence_number = 0;
 	frame.control_field = C_SET;
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	alrm_info.fd = fd;
+	alrm_info.datalink = datalink;
 	alrm_info.tries_left = INIT_CONNECTION_TRIES;
 	alrm_info.time_dif = INIT_CONNECTION_RESEND_TIME;
 	alrm_info.frame = &frame;
@@ -175,7 +202,7 @@ int llopen_transmitter(int fd) {
 	write_timed_frame();
 	while(alrm_info.tries_left > 0) {
 		frame_t answer;
-		int ret = get_frame(fd, &answer);
+		int ret = get_frame(datalink, &answer);
 		if(ret == READ_ERROR) {
 			printf("ERROR (llopen_transmitter): get_frame failed\n");
 			return 1;
@@ -204,7 +231,7 @@ int llopen_transmitter(int fd) {
 	return 0;
 }
 
-int llopen_receiver(int fd) {
+int llopen_receiver(datalink_t *datalink) {
 
 	alrm_info.frame = NULL;
 	alrm_info.tries_left = 0;
@@ -219,7 +246,7 @@ int llopen_receiver(int fd) {
 
 	while (attempts > 0) {
 		frame_t frame;
-		int ret = get_frame(fd, &frame);
+		int ret = get_frame(datalink, &frame);
 		if(ret == READ_ERROR) {
 			printf("ERROR (llopen_receiver): get_frame failed\n");
 			return 1;
@@ -247,7 +274,7 @@ int llopen_receiver(int fd) {
 	answer.type = CMD_FRAME;
 	answer.address_field = A_TRANSMITTER;
 
-	if(send_frame(fd, &answer)) {
+	if(send_frame(datalink, &answer)) {
 		printf("ERROR (llopen_receiver): unable to answer sender's SET.\n");
 		return 1;
 	}
@@ -263,7 +290,7 @@ int llclose_transmitter(datalink_t *datalink) {
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	alrm_info.fd = datalink->fd;
+	alrm_info.datalink = datalink;
 	alrm_info.tries_left = FINAL_DISCONNECTION_TRIES;
 	alrm_info.time_dif = FINAL_DISCONNECTION_RESEND_TIME;
 	alrm_info.frame = &frame;
@@ -273,7 +300,7 @@ int llclose_transmitter(datalink_t *datalink) {
 
 	while(alrm_info.tries_left > 0) {
 		frame_t answer;
-		int ret = get_frame(datalink->fd, &answer);
+		int ret = get_frame(datalink, &answer);
 		if(ret == READ_ERROR) {
 			printf("ERROR (llclose_transmitter): get_frame failed\n");
 			return 1;
@@ -298,7 +325,7 @@ int llclose_transmitter(datalink_t *datalink) {
 	final_ua.type = CMD_FRAME;
 	final_ua.address_field = A_TRANSMITTER;
 
-	if(send_frame(datalink->fd, &final_ua)) {
+	if(send_frame(datalink, &final_ua)) {
 		printf("ERROR (llclose_transmitter): unable to answer receiver's DISC.\n");
 		return 1;
 	}
@@ -315,7 +342,7 @@ int llclose_receiver(datalink_t *datalink) {
 
 	while (attempts > 0) {
 		frame_t frame;
-		int ret = get_frame(datalink->fd, &frame);
+		int ret = get_frame(datalink, &frame);
 		if(ret == READ_ERROR) {
 			printf("ERROR (llclose_receiver): get_frame failed\n");
 			return 1;
@@ -350,7 +377,7 @@ int llclose_receiver(datalink_t *datalink) {
 	answer.type = CMD_FRAME;
 	answer.address_field = A_TRANSMITTER;
 
-	if(send_frame(datalink->fd, &answer)) {
+	if(send_frame(datalink, &answer)) {
 		printf("ERROR (llclose_receiver): unable to answer sender's SET.\n");
 		return 1;
 	}
@@ -372,7 +399,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	frame.type = DATA_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	alrm_info.fd = datalink->fd;
+	alrm_info.datalink = datalink;
 	alrm_info.tries_left = INIT_CONNECTION_TRIES;
 	alrm_info.time_dif = INIT_CONNECTION_RESEND_TIME;
 	alrm_info.frame = &frame;
@@ -385,7 +412,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 
 	while(attempts-- > 0) {
 		frame_t answer;
-		int ret = get_frame(datalink->fd, &answer);
+		int ret = get_frame(datalink, &answer);
 		if(ret == READ_ERROR) {
 			printf("ERROR (llwrite): get_frame failed\n");
 			continue;
@@ -408,6 +435,13 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 
 		if(check_bcc1(&answer)) {
 			printf("Invalid bcc1 in frame received\n");
+			continue;
+		}
+
+		if(answer.control_field == C_REJ((datalink->curr_seq_number)%2)) {
+			printf("Got REJ, resending\n");
+			send_frame(datalink, &frame);
+			++datalink->num_received_REJs;
 			continue;
 		}
 
@@ -434,13 +468,14 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 }
 
 int send_REJ(datalink_t *datalink) {
+	++datalink->num_sent_REJs;
 	frame_t frame;
 	frame.sequence_number = datalink->curr_seq_number;
 	frame.control_field = C_REJ(datalink->curr_seq_number);
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	return send_frame(datalink->fd, &frame);
+	return send_frame(datalink, &frame);
 }
 
 int send_RR(datalink_t *datalink) {
@@ -450,7 +485,7 @@ int send_RR(datalink_t *datalink) {
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	return send_frame(datalink->fd, &frame);
+	return send_frame(datalink, &frame);
 }
 
 int send_UA(datalink_t *datalink) {
@@ -460,7 +495,7 @@ int send_UA(datalink_t *datalink) {
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	return send_frame(datalink->fd, &frame);
+	return send_frame(datalink, &frame);
 }
 
 int llread(datalink_t *datalink, char * buffer) {
@@ -476,7 +511,7 @@ int llread(datalink_t *datalink, char * buffer) {
 	frame_t frame;
 	int tries = LLREAD_VALIDMSG_TRIES;
 	while(tries-- > 0) {
-		int ret = get_frame(datalink->fd, &frame);
+		int ret = get_frame(datalink, &frame);
 		if(ret == READ_ERROR) {
 			printf("ERROR (llread): unable to get frame\n");
 			return -1;
@@ -498,10 +533,13 @@ int llread(datalink_t *datalink, char * buffer) {
 			}
 		}
 
+		++datalink->num_received_data_frames;
+
 		if(check_bcc2(&frame)) {
 			if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
 				printf("REJ\n");
 				send_REJ(datalink);
+				++datalink->num_sent_REJs;
 				continue;
 			} else {
 				printf("BCC2 failed.\n");
@@ -541,7 +579,7 @@ unsigned acknowledge_frame(datalink_t *datalink) {
 	frame.type = CMD_FRAME;
 	frame.address_field = A_TRANSMITTER;
 
-	alrm_info.fd = datalink->fd;
+	alrm_info.datalink = datalink;
 	alrm_info.tries_left = LLREAD_ANSWER_TRIES;
 	alrm_info.time_dif = LLREAD_ANSWER_RESEND_TIME;
 	alrm_info.frame = &frame;
@@ -558,26 +596,26 @@ int check_frame_order(datalink_t *datalink, frame_t *frame) {
 	}
 }
 
-int send_frame(int fd, const frame_t *frame) {
+int send_frame(datalink_t *datalink, const frame_t *frame) {
 	switch(frame->type) {
 	case CMD_FRAME:
-		return send_cmd_frame(fd, frame);
+		return send_cmd_frame(datalink, frame);
 	case DATA_FRAME:
-		return send_data_frame(fd, frame);
+		return send_data_frame(datalink, frame);
 	}
 
 	printf("ERROR (send_frame): invalid frame type received.\n");
 	return 1;
 }
 
-int send_cmd_frame(int fd, const frame_t *frame)
+int send_cmd_frame(datalink_t *datalink, const frame_t *frame)
 {
 	unsigned char msg[] = {FLAG,
 			frame->address_field,
 			frame->control_field,
 			frame->address_field ^ frame->control_field,
 			FLAG};
-	if (write(fd, msg, sizeof(msg)) != sizeof(msg)) {
+	if (write(datalink->fd, msg, sizeof(msg)) != sizeof(msg)) {
 		printf("ERROR (send_cmd_frame): write failed\n");
 		return 1;
 	}
@@ -585,7 +623,7 @@ int send_cmd_frame(int fd, const frame_t *frame)
 	return 0;
 }
 
-int send_data_frame(int fd, const frame_t *frame)
+int send_data_frame(datalink_t *datalink, const frame_t *frame)
 {
 	printf("Sending data frame...\n");
 	unsigned char ctrl = frame->sequence_number << 5;
@@ -618,10 +656,11 @@ int send_data_frame(int fd, const frame_t *frame)
 	}
 
 	unsigned char ft[] = {FLAG };
-	if (write(fd, fh, sizeof(fh)) != sizeof(fh)) return 1;
-	if (write(fd, data, length) != length) return 1;
-	if (write(fd, bcc2_stuffed, length2) != length2) return 1;
-	if (write(fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
+	if (write(datalink->fd, fh, sizeof(fh)) != sizeof(fh)) return 1;
+	if (write(datalink->fd, data, length) != length) return 1;
+	if (write(datalink->fd, bcc2_stuffed, length2) != length2) return 1;
+	if (write(datalink->fd, ft, sizeof(ft)) != sizeof(ft)) return 1;
+	++datalink->num_sent_data_frames;
 	free(data);
 	free(bcc2_stuffed);
 	return 0;
@@ -684,7 +723,7 @@ int byte_destuffing(const unsigned char *src, unsigned length, unsigned char **d
 	return 0;
 }
 
-int get_frame(int fd, frame_t *frame) {
+int get_frame(datalink_t *datalink, frame_t *frame) {
 	state_t state = START;
 	unsigned char byte;
 	if ((frame->buffer = malloc(sizeof(char) * 50000)) == NULL) {
@@ -710,7 +749,7 @@ int get_frame(int fd, frame_t *frame) {
 
 	while(state != STOP) {
 		//printf("PREV_STATE: %s\t", test[(int)state]);
-		int ret = read_byte(fd, &byte);
+		int ret = read_byte(datalink->fd, &byte);
 		if(ret == 0) {
 			return READ_ERROR;
 		} else if(ret == -1) {

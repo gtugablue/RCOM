@@ -72,17 +72,8 @@ typedef enum {START,
 #define LLREAD_ANSWER_RESEND_TIME 1
 #define LLREAD_VALIDMSG_TRIES 15
 #define LLWRITE_ANSWER_TRIES 15
-
 #define READ_ERROR 1
 #define READ_RETURN_ALARM 2
-
-typedef struct {
-	int fd;
-	unsigned int tries_left;
-	unsigned int time_dif;
-	frame_t *frame;
-	unsigned int stop;
-} alarm_info_t;
 
 typedef enum {
 	FIRST,
@@ -96,6 +87,11 @@ typedef struct {
 	unsigned int curr_seq_number;
 	unsigned int repeat;
 	frame_order_t frame_order;
+	unsigned num_sent_data_frames;
+	unsigned num_received_data_frames;
+	unsigned num_timeouts;
+	unsigned num_sent_REJs;
+	unsigned num_received_REJs;
 } datalink_t;
 
 /*
