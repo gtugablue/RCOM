@@ -40,6 +40,7 @@ void alarm_handler() {
 		if(alrm_info.tries_left > 0)
 			--alrm_info.tries_left;
 		else {
+			printf("ERROR: Connection timed out\n");
 			if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
 				printf("ERROR (alarm_handler): unable to send SIGINT signal.\n");
 				return;
@@ -57,6 +58,7 @@ void alarm_handler() {
 		alarm(alrm_info.time_dif);
 	} else {
 		alrm_info.stop = 2;
+		printf("ERROR: Connection timed out\n");
 		if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
 			printf("ERROR (alarm_handler): unable to send SIGINT signal.\n");
 			return;
@@ -71,7 +73,12 @@ int write_timed_frame() {
 		return 1;
 	}
 
-	signal(SIGALRM, alarm_handler);
+	struct sigaction sa;
+	sigaction(SIGALRM, NULL, &sa);
+	sa.sa_handler = alarm_handler;
+	sigaction(SIGALRM, &sa, NULL);
+
+	//signal(SIGALRM, alarm_handler);
 	if(send_frame(alrm_info.fd, alrm_info.frame)) {
 		printf("ERROR (write_timed_frame): send_frame failed.\n");
 		return 1;
@@ -690,8 +697,11 @@ int get_frame(int fd, frame_t *frame) {
 	while(state != STOP) {
 		//printf("PREV_STATE: %s\t", test[(int)state]);
 		int ret = read_byte(fd, &byte);
+		printf("[%d]\n", ret);
 		if(ret == 0) {
 			return 1;
+		} else if(ret == -1) {
+			continue;
 		}
 
 		switch(state) {
