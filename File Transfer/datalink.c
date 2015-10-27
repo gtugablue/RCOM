@@ -695,11 +695,7 @@ int get_frame(int fd, frame_t *frame) {
 		case C_RCV:
 		{
 			//unsigned char bcc1 = frame->address_field ^ frame->control_field;
-			if(frame->type == CMD_FRAME)
-				state = BCC1_RCV;
-			else
-				state = DATA_ESC_RCV;
-
+			state = BCC1_RCV;
 			frame->bcc1 = byte;
 			break;
 		}
@@ -707,27 +703,8 @@ int get_frame(int fd, frame_t *frame) {
 			if(byte == FLAG) {
 				state = STOP;
 			} else {
-				state = START;
-			}
-			break;
-		/*case DATA_ESC_RCV:
-			if(byte == ESC) {
-				state = DATA_RCV;
-			} else if(byte == FLAG) {
-				if(buf_length == 0)
-					state = FLAG_RCV;
-				else
-					state = STOP;
-			} else {
-				//frame->buffer[frame->length++] = byte;
 				buf[buf_length++] = byte;
 			}
-			break;*/
-		case DATA_ESC_RCV:
-		case DATA_RCV:
-			//frame->buffer[frame->length++] = byte;
-			buf[buf_length++] = byte;
-			state = DATA_ESC_RCV;
 			break;
 		case STOP:
 			break;

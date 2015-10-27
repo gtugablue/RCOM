@@ -55,8 +55,6 @@ typedef enum {START,
 	A_RCV,
 	C_RCV,
 	BCC1_RCV,
-	DATA_ESC_RCV,
-	DATA_RCV,
 	STOP
 } state_t;
 
