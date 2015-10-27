@@ -421,6 +421,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 				printf("ERROR: Connection timed out\n");
 				return 1;
 			}
+			continue;
 		}
 
 		if(alrm_info.stop == 2) {
@@ -446,7 +447,8 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 		}
 
 		if(answer.control_field != C_RR((datalink->curr_seq_number + 1)%2)) {
-			printf("Inavlid RR value received");
+			printf("Invalid RR value received");
+			send_frame(datalink, &frame);
 			continue;
 		}
 
@@ -549,12 +551,12 @@ int llread(datalink_t *datalink, char * buffer) {
 			}
 		}
 
-		/*if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
+		if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
 			printf("BCC2 failed.\n");
 			printf("RR%d\n", datalink->curr_seq_number);
 			send_RR(datalink);
 			continue;
-		}*/
+		}
 
 		alrm_info.stop = 1;
 		inc_sequence_number(&datalink->curr_seq_number);
