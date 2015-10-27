@@ -347,7 +347,7 @@ int cli(){
 
 			break;
 		}else{
-			perror("Invalid mode.\n");
+			printf("Invalid mode.\n");
 			continue;
 		}
 
@@ -355,7 +355,7 @@ int cli(){
 	}
 
 	if (!valid){
-		perror("Invalid mode.\n");
+		printf("Invalid mode.\n");
 		return -1;
 	}
 
@@ -363,6 +363,7 @@ int cli(){
 	valid=0;
 
 	if (strcmp(mode, "send") == 0)
+	{
 		while(tries-- > 0){
 
 			printf("File name? ");
@@ -374,11 +375,15 @@ int cli(){
 				valid=1;
 				break;
 			}
-
 		}
-
+	}
+	else
+	{
+		printf("Destination folder? ");
+		scanf("%s", fileName);
+	}
 	if (!valid){
-		perror("File does not exist.\n");
+		printf("Invalid input.\n");
 		return -1;
 	}
 	printf("Port? ");
@@ -387,5 +392,5 @@ int cli(){
 	if (strcmp(mode, "send") == 0)
 		return send_file(port, fileName);
 	else
-		return receive_file(port);
+		return receive_file(port, fileName);
 }
