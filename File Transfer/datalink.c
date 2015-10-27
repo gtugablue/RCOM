@@ -429,7 +429,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 			continue;
 		}
 
-		if(answer.type != CMD_FRAME) {
+		if(answer.type != CMD_FRAME && ret != READ_RETURN_ALARM) {
 			printf("Invalid RR or REJ received\n");
 			continue;
 		}
