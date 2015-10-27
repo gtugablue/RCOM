@@ -61,17 +61,20 @@ typedef enum {START,
 /*
  * Define the program mode (either reader or writer)
  */
-#define SENDER 0	// TODO enum
+#define SENDER 0
 #define RECEIVER 1
 
-#define INIT_CONNECTION_TRIES 5
+#define INIT_CONNECTION_TRIES 15
 #define INIT_CONNECTION_RESEND_TIME 1
-#define FINAL_DISCONNECTION_TRIES 5
+#define FINAL_DISCONNECTION_TRIES 15
 #define FINAL_DISCONNECTION_RESEND_TIME 1
-#define LLREAD_ANSWER_TRIES 5
+#define LLREAD_ANSWER_TRIES 15
 #define LLREAD_ANSWER_RESEND_TIME 1
-#define LLREAD_VALIDMSG_TRIES 5
-#define LLWRITE_ANSWER_TRIES 5
+#define LLREAD_VALIDMSG_TRIES 15
+#define LLWRITE_ANSWER_TRIES 15
+
+#define READ_ERROR 1
+#define READ_RETURN_ALARM 2
 
 typedef struct {
 	int fd;

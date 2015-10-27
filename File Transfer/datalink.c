@@ -21,7 +21,6 @@ int llopen_receiver(int fd);
 int llclose_transmitter(datalink_t *datalink);
 int llclose_receiver(datalink_t *datalink);
 unsigned acknowledge_frame(datalink_t *datalink);
-unsigned get_data_frame(datalink_t *datalink, frame_t *frame);
 void inc_sequence_number(unsigned int *seq_num);
 int check_frame_order(datalink_t *datalink, frame_t *frame);
 int send_REJ(datalink_t *datalink);
@@ -40,11 +39,12 @@ void alarm_handler() {
 		if(alrm_info.tries_left > 0)
 			--alrm_info.tries_left;
 		else {
-			printf("ERROR: Connection timed out\n");
+			/*printf("ERROR: Connection timed out\n");
 			if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
 				printf("ERROR (alarm_handler): unable to send SIGINT signal.\n");
 				return;
-			}
+			}*/
+			return;
 		}
 		return;
 	}
@@ -58,11 +58,12 @@ void alarm_handler() {
 		alarm(alrm_info.time_dif);
 	} else {
 		alrm_info.stop = 2;
-		printf("ERROR: Connection timed out\n");
+		/*printf("ERROR: Connection timed out\n");
 		if(kill(getpid(), SIGINT) != 0) {	// to return from blocking read in get_frame
 			printf("ERROR (alarm_handler): unable to send SIGINT signal.\n");
 			return;
-		}
+		}*/
+		return;
 	}
 }
 
@@ -172,21 +173,33 @@ int llopen_transmitter(int fd) {
 	alrm_info.stop = 0;
 
 	write_timed_frame();
+	while(alrm_info.tries_left > 0) {
+		frame_t answer;
+		int ret = get_frame(fd, &answer);
+		if(ret == READ_ERROR) {
+			printf("ERROR (llopen_transmitter): get_frame failed\n");
+			return 1;
+		} else if(ret == READ_RETURN_ALARM) {
+			continue;
+		}
 
-	frame_t answer;
-	if(get_frame(fd, &answer)) {
-		printf("ERROR (llopen_transmitter): get_frame failed\n");
+		if(alrm_info.stop == 2) {
+			printf("ERROR (llopen_transmitter): transmission failed (number of attempts to get UA exceeded)\n");
+			return 1;
+		}
+		if(invalid_frame(&answer) || answer.control_field != C_UA) {
+			printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame\n");
+			return 1;
+		}
+		alrm_info.stop = 1;
+		alrm_info.tries_left = 0;
+		alrm_info.frame = NULL;
+	}
+
+	if(alrm_info.frame != NULL) {
+		printf("ERROR: Connection timed out.\n");
 		return 1;
 	}
-	if(alrm_info.stop == 2) {
-		printf("ERROR (llopen_transmitter): transmission failed (number of attempts to get UA exceeded)\n");
-		return 1;
-	}
-	if(invalid_frame(&answer) || answer.control_field != C_UA) {
-		printf("ERROR (llopen_transmitter): received invalid frame. Expected valid UA command frame\n");
-		return 1;
-	}
-	alrm_info.stop = 1;
 
 	return 0;
 }
@@ -196,23 +209,22 @@ int llopen_receiver(int fd) {
 	alrm_info.frame = NULL;
 	alrm_info.tries_left = 0;
 	alrm_info.stop = 0;
-	signal(SIGALRM, alarm_handler);
-	/*struct sigaction act;
-	memset (&act, '\0', sizeof(act));
-	//act.sa_sigaction = &alarm_handler;
-	//act.sa_flags = SA_SIGINFO | (SA_RESTART ^ (unsigned)0xFFFFFFFFFF);
-	if (sigaction(SIGTERM, &act, NULL) < 0) {
-		perror ("sigaction");
-		return 1;
-	}*/
+	struct sigaction sa;
+	sigaction(SIGALRM, NULL, &sa);
+	sa.sa_handler = alarm_handler;
+	sigaction(SIGALRM, &sa, NULL);
 	alarm(15);
 
 	int attempts = INIT_CONNECTION_TRIES;
 
 	while (attempts > 0) {
 		frame_t frame;
-		if(get_frame(fd, &frame)) {
+		int ret = get_frame(fd, &frame);
+		if(ret == READ_ERROR) {
 			printf("ERROR (llopen_receiver): get_frame failed\n");
+			return 1;
+		} else if (ret == READ_RETURN_ALARM) {
+			printf("ERROR: Connection timed out.\n");
 			return 1;
 		}
 
@@ -259,20 +271,26 @@ int llclose_transmitter(datalink_t *datalink) {
 
 	write_timed_frame();
 
-	frame_t answer;
-	if(get_frame(datalink->fd, &answer)) {
-		printf("ERROR (llclose_transmitter): get_frame failed\n");
-		return 1;
+	while(alrm_info.tries_left > 0) {
+		frame_t answer;
+		int ret = get_frame(datalink->fd, &answer);
+		if(ret == READ_ERROR) {
+			printf("ERROR (llclose_transmitter): get_frame failed\n");
+			return 1;
+		} else if (ret == READ_RETURN_ALARM) {
+			continue;
+		}
+
+		if(alrm_info.stop == 2) {
+			printf("ERROR (llclose_transmitter)\n");
+			return 1;
+		}
+		if(invalid_frame(&answer) || answer.control_field != C_DISC) {
+			printf("ERROR (llclose_transmitter): received invalid frame. Expected valid DISC command frame.\n");
+			return 1;
+		}
+		alrm_info.stop = 1;
 	}
-	if(alrm_info.stop == 2) {
-		printf("ERROR (llclose_transmitter)\n");
-		return 1;
-	}
-	if(invalid_frame(&answer) || answer.control_field != C_DISC) {
-		printf("ERROR (llclose_transmitter): received invalid frame. Expected valid DISC command frame.\n");
-		return 1;
-	}
-	alrm_info.stop = 1;
 
 	frame_t final_ua;
 	final_ua.sequence_number = 0;
@@ -290,13 +308,20 @@ int llclose_transmitter(datalink_t *datalink) {
 
 int llclose_receiver(datalink_t *datalink) {
 
+	alrm_info.tries_left = 0;
+	alrm_info.stop = 1;
 	int attempts = FINAL_DISCONNECTION_TRIES;
+	alarm(15);
 
 	while (attempts > 0) {
 		frame_t frame;
-		if(get_frame(datalink->fd, &frame)) {
+		int ret = get_frame(datalink->fd, &frame);
+		if(ret == READ_ERROR) {
 			printf("ERROR (llclose_receiver): get_frame failed\n");
 			return 1;
+		} else if(ret == READ_RETURN_ALARM) {
+			printf("ERROR: Disconnection timed out\n");
+			break;
 		}
 
 		if(frame.type == DATA_FRAME) {
@@ -315,7 +340,7 @@ int llclose_receiver(datalink_t *datalink) {
 		--attempts;
 	}
 	if(attempts <= 0) {
-		printf("ERROR (llclose_receiver): transmission failed (attemts to get DISC exceeded\n");
+		printf("ERROR (llclose_receiver): transmission failed (attemts to get DISC exceeded)\n");
 		return 1;
 	}
 
@@ -360,10 +385,17 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 
 	while(attempts-- > 0) {
 		frame_t answer;
-		if(get_frame(datalink->fd, &answer)) {
+		int ret = get_frame(datalink->fd, &answer);
+		if(ret == READ_ERROR) {
 			printf("ERROR (llwrite): get_frame failed\n");
 			continue;
+		} else if(ret == READ_RETURN_ALARM) {
+			if(alrm_info.tries_left <= 0) {
+				printf("ERROR: Connection timed out\n");
+				return 1;
+			}
 		}
+
 		if(alrm_info.stop == 2) {
 			printf("ERROR (llwrite): transmission failed (number of attempts to get RR exceeded)\n");
 			continue;
@@ -435,15 +467,22 @@ int llread(datalink_t *datalink, char * buffer) {
 	alrm_info.frame = NULL;
 	alrm_info.tries_left = 0;
 	alrm_info.stop = 0;
-	signal(SIGALRM, alarm_handler);
+	struct sigaction sa;
+	sigaction(SIGALRM, NULL, &sa);
+	sa.sa_handler = alarm_handler;
+	sigaction(SIGALRM, &sa, NULL);
 	alarm(15);
 
 	frame_t frame;
 	int tries = LLREAD_VALIDMSG_TRIES;
 	while(tries-- > 0) {
-		if(get_frame(datalink->fd, &frame)) {
+		int ret = get_frame(datalink->fd, &frame);
+		if(ret == READ_ERROR) {
 			printf("ERROR (llread): unable to get frame\n");
 			return -1;
+		} else if(ret == READ_RETURN_ALARM) {
+			printf("ERROR: Connection timed out\n");
+			return 1;
 		}
 
 		if(check_bcc1(&frame)) {
@@ -509,31 +548,6 @@ unsigned acknowledge_frame(datalink_t *datalink) {
 	alrm_info.stop = 0;
 
 	return write_timed_frame();
-}
-
-unsigned get_data_frame(datalink_t *datalink, frame_t *frame) {
-	int tries = LLREAD_VALIDMSG_TRIES;
-	while(tries-- > 0) {
-		if(get_frame(datalink->fd, frame)) {
-			printf("ERROR (get_data_frame): unable to get a frame\n");
-			return 1;
-		}
-		if(alrm_info.stop == 2) {
-			printf("ERROR (get_data_frame): unable to get frame, ammount of attempts exceeded\n");
-			return 1;
-		}
-
-		if(invalid_frame(frame) || (frame->control_field != ORDER_BIT(datalink->curr_seq_number))) {
-			printf("ERROR (get_data_frame): received invalid frame. Expected valid DATA frame\n");
-			return 1;
-		}
-
-		alrm_info.stop = 1;
-
-		return 0;
-	}
-
-	return 1;
 }
 
 int check_frame_order(datalink_t *datalink, frame_t *frame) {
@@ -697,11 +711,10 @@ int get_frame(int fd, frame_t *frame) {
 	while(state != STOP) {
 		//printf("PREV_STATE: %s\t", test[(int)state]);
 		int ret = read_byte(fd, &byte);
-		printf("[%d]\n", ret);
 		if(ret == 0) {
-			return 1;
+			return READ_ERROR;
 		} else if(ret == -1) {
-			continue;
+			return READ_RETURN_ALARM;
 		}
 
 		switch(state) {
