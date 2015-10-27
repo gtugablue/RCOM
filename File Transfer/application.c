@@ -376,15 +376,15 @@ int cli(){
 				break;
 			}
 		}
+		if (!valid){
+			printf("Invalid input.\n");
+			return -1;
+		}
 	}
 	else
 	{
 		printf("Destination folder? ");
 		scanf("%s", fileName);
-	}
-	if (!valid){
-		printf("Invalid input.\n");
-		return -1;
 	}
 	printf("Port? ");
 	scanf("%s",port);
