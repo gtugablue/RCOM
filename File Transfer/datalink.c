@@ -708,7 +708,7 @@ int get_frame(int fd, frame_t *frame) {
 				state = START;
 			}
 			break;
-		case DATA_ESC_RCV:
+		/*case DATA_ESC_RCV:
 			if(byte == ESC) {
 				state = DATA_RCV;
 			} else if(byte == FLAG) {
@@ -720,7 +720,8 @@ int get_frame(int fd, frame_t *frame) {
 				//frame->buffer[frame->length++] = byte;
 				buf[buf_length++] = byte;
 			}
-			break;
+			break;*/
+		case DATA_ESC_RCV:
 		case DATA_RCV:
 			//frame->buffer[frame->length++] = byte;
 			buf[buf_length++] = byte;
