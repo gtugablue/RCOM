@@ -757,7 +757,6 @@ int get_frame(int fd, frame_t *frame) {
 		frame->length = temp_len - 1;
 		memcpy(frame->buffer, temp, temp_len - 1);
 		frame->bcc2 = temp[temp_len-1];
-		printf("bcc2 received: 0x%X\n", frame->bcc2);
 	}
 
 	//printf("\n\tLEFT State Machine\n\n");
