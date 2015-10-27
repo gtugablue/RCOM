@@ -52,6 +52,7 @@ int check_bcc2(const frame_t *frame) {
 	for(i = 0; i < frame->length; i++) {
 		cumulative_xor = (cumulative_xor ^ frame->buffer[i]);
 	}
+	printf("==>0x%x\n", cumulative_xor);
 
 	if(cumulative_xor == frame->bcc2)
 		return 0;
