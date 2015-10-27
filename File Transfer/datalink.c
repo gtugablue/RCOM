@@ -463,6 +463,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 		alrm_info.stop = 1;
 		break;
 	}
+	free(frame.buffer);
 
 	if(attempts == 0) {
 		printf("ERROR (llwrite): communication failed. Attempts to send frame exceeded limit(%d)", LLWRITE_ANSWER_TRIES);
@@ -814,16 +815,15 @@ int get_frame(datalink_t *datalink, frame_t *frame) {
 	unsigned char *temp; unsigned int temp_len;
 
 	if(frame->type == DATA_FRAME) {
-		printf("Before destuffing\n");
 		if(byte_destuffing(buf, buf_length, &temp, &temp_len)) {
 			printf("ERROR (get_frame): failed to perform destuffing on DATA frame received\n");
 			return 1;
 		}
-		printf("After destuffing\n");
 
 		frame->length = temp_len - 1;
 		memcpy(frame->buffer, temp, temp_len - 1);
 		frame->bcc2 = temp[temp_len-1];
+		free(temp);
 	}
 
 	//printf("\n\tLEFT State Machine\n\n");

@@ -247,6 +247,7 @@ int receive_file(const char *port, const char *destination_folder)
 	unsigned long bytes_read = 0;
 	unsigned char sn = 0;
 	unsigned long file_size = strtoul(param_size->value, NULL, 10);
+	printf("File size: %lu bytes.\n", file_size);
 	show_progress_bar(0);
 	while (bytes_read < file_size)
 	{
@@ -254,7 +255,7 @@ int receive_file(const char *port, const char *destination_folder)
 		if (llread(&datalink, buf) < 0) return 1;
 		data_packet.ctrl_field = buf[0];
 		data_packet.sn = buf[1];
-		data_packet.length = (buf[2] << 8) | buf[3];
+		data_packet.length = (((unsigned char)buf[2]) << 8) | ((unsigned char)buf[3]);
 		data_packet.data = &buf[4];
 		if (data_packet.ctrl_field != PACKET_CTRL_FIELD_DATA)
 		{
@@ -267,9 +268,10 @@ int receive_file(const char *port, const char *destination_folder)
 			return 1;
 		}
 		sn = (unsigned char)(((unsigned)sn + 1) % (1 << 8));
-		if(fwrite(data_packet.data, sizeof(char), data_packet.length, fp) < data_packet.length)
+		unsigned num_written = fwrite(data_packet.data, sizeof(char), data_packet.length, fp);
+		if(num_written < data_packet.length)
 		{
-			printf("Error writting to output file.\n");
+			printf("Error writting to output file. Could only write %d out of %d bytes.\n", num_written, data_packet.length);
 			return 1;
 		}
 		bytes_read += data_packet.length;
