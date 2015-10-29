@@ -544,7 +544,7 @@ int llread(datalink_t *datalink, char * buffer) {
 		++datalink->num_received_data_frames;
 
 		if(check_bcc2(&frame)) {
-			if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
+			if(ORDER_BIT(datalink->curr_seq_number) == frame.control_field) {
 				printf("REJ\n");
 				send_REJ(datalink);
 				++datalink->num_sent_REJs;
