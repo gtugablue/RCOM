@@ -51,6 +51,7 @@ void show_progress_bar(float progress);
 void print_usage(char *argv0);
 int cli();
 int baudrate = 0;
+int max_packet_size = MAX_PACKET_SIZE;
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
@@ -157,12 +158,12 @@ int send_file(const char *port, const char *file_name)
 	// Send data packet
 	unsigned long i;
 	unsigned sn = 0;
-	for (i = 0; i < size; i += MAX_PACKET_SIZE)
+	for (i = 0; i < size; i += max_packet_size)
 	{
 		data_packet_t data_packet;
 		data_packet.ctrl_field = PACKET_CTRL_FIELD_DATA;
 		data_packet.sn = (char)(sn++ % (1 << 8));
-		data_packet.length = MIN(MAX_PACKET_SIZE, size - i);
+		data_packet.length = MIN(max_packet_size, size - i);
 		data_packet.data = &data[i];
 		if (send_data_packet(&datalink, &data_packet)) return 1;
 		show_progress_bar((float)i/size);
@@ -229,7 +230,7 @@ int receive_file(const char *port, const char *destination_folder)
 	datalink_init(&datalink, RECEIVER);
 	datalink->baudrate = baudrate;
 	if (llopen(port, &datalink)) return 1;
-	char buf[MAX_PACKET_SIZE];
+	char buf[max_packet_size];
 
 	unsigned long size = llread(&datalink, buf);
 	if (size < 0)
@@ -242,7 +243,7 @@ int receive_file(const char *port, const char *destination_folder)
 	control_packet_t control_packet;
 	unsigned long i = 0;
 	control_packet.ctrl_field = buf[i++];
-	control_packet_param_t params[MAX_PACKET_SIZE];
+	control_packet_param_t params[max_packet_size];
 	unsigned long j;
 
 	for (j = 0; i < size; ++j)
@@ -425,6 +426,19 @@ int cli(){
 
 	printf("Baudrate (0 to select default value)? ");
 	scanf("%d", &baudrate);
+
+	tries = 3;
+	while(tries-- > 0) {
+		max_packet_size = -1;
+		printf("Max data packet size (0 to select default value, other values between 10 and 200)? ");
+		scanf("%d", &max_packet_size);
+
+		if(max_packet_size < 10 || max_packet_size > 200) {
+			printf("Invalid input!\n");
+			max_packet_size = MAX_PACKET_SIZE;
+			continue;
+		}
+	}
 
 	if (strcmp(mode, "send") == 0)
 		return send_file(port, fileName);
