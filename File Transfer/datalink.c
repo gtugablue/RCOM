@@ -537,17 +537,20 @@ int llread(datalink_t *datalink, char * buffer) {
 		}
 
 		int probability_check = 2;
+		int continue_outter = 0;
 
 		while(probability_check-- > 0) {
 			if(check_bcc1(&frame)) {
-				continue;
+				continue_outter = 1;
+				break;
 			}
 
 			if(frame.type == CMD_FRAME) {
 				if(frame.control_field == C_SET) {
 					if(send_UA(datalink)) {
 						printf("Got SET but unable to answer UA\n");
-						continue;
+						continue_outter = 1;
+						break;
 					}
 				}
 			}
@@ -559,12 +562,14 @@ int llread(datalink_t *datalink, char * buffer) {
 					printf("REJ\n");
 					send_REJ(datalink);
 					++datalink->num_sent_REJs;
-					continue;
+					continue_outter = 1;
+					break;
 				} else {
 					printf("BCC2 failed.\n");
 					printf("RR%d\n", datalink->curr_seq_number);
 					send_RR(datalink);
-					continue;
+					continue_outter = 1;
+					break;
 				}
 			}
 
@@ -576,7 +581,8 @@ int llread(datalink_t *datalink, char * buffer) {
 				frame->bcc2 += 13;	// INDUCE BCC2 ERROR
 			}
 		}
-
+		if(continue_outter)
+			continue;
 
 
 		if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
