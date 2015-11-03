@@ -12,6 +12,8 @@
 #define MIN(A, B) (((A) < (B)) ? (A) : (B))
 #define GET_BYTE(X, N) (((X) & (0xFF << (N * 8))) >> (N * 8))
 
+#define NUM_FILE_SEND_RECEIVE_RETRIES 3
+
 typedef enum {
 	PACKET_CTRL_TYPE_SIZE,
 	PACKET_CTRL_TYPE_NAME
@@ -65,13 +67,15 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 			return 1;
 		}
 		datalink_init(&datalink, SENDER);
-		if (send_file(argv[1], argv[3]))
+		unsigned tries = 0;
+		while (tries < NUM_FILE_SEND_RECEIVE_RETRIES)
 		{
-			printf("Error sending file.\n");
-			return 1;
+			if (send_file(argv[1], argv[3]))
+				tries++;
+			else
+				return 0;
 		}
-		else
-			printf("File sent successfully.\n");
+		printf("Couldn't send file. Terminating program.\n");
 	} else if(strcmp(argv[2], "receive") == 0) {
 		if (argc != 3)
 		{
@@ -79,8 +83,15 @@ int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filen
 			return 1;
 		}
 		datalink_init(&datalink, RECEIVER);
-		printf("Result: %d\n", receive_file(argv[1], argc == 4 ? argv[3] : ""));
-		// TODO
+		unsigned tries = 0;
+		while (tries < NUM_FILE_SEND_RECEIVE_RETRIES)
+		{
+			if (receive_file(argv[1], argc == 4 ? argv[3] : ""))
+				tries++;
+			else
+				return 0;
+		}
+		printf("Couldn't receive file. Terminating program.\n");
 	}
 	return 0;
 }
