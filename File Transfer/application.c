@@ -152,6 +152,7 @@ int send_file(const char *port, const char *file_name)
 		data_packet.length = MIN(MAX_PACKET_SIZE, size - i);
 		data_packet.data = &data[i];
 		if (send_data_packet(&datalink, &data_packet)) return 1;
+		show_progress_bar((float)i/size);
 	}
 
 	// Send end packet

@@ -43,7 +43,9 @@ void alarm_handler() {
 		alrm_info.tries_left = 0;
 		return;
 	}
-	++alrm_info.datalink->num_timeouts;
+
+	if(alrm_info.datalink != NULL)
+		++alrm_info.datalink->num_timeouts;
 
 	if(alrm_info.frame == NULL) {
 		if(alrm_info.tries_left > 0)
@@ -403,8 +405,8 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	frame.address_field = A_TRANSMITTER;
 
 	alrm_info.datalink = datalink;
-	alrm_info.tries_left = INIT_CONNECTION_TRIES;
-	alrm_info.time_dif = INIT_CONNECTION_RESEND_TIME;
+	alrm_info.tries_left = LLWRITE_ANSWER_TRIES;
+	alrm_info.time_dif = LLWRITE_ANSWER_TIMEOUT;
 	alrm_info.frame = &frame;
 	alrm_info.stop = 0;
 
@@ -542,7 +544,7 @@ int llread(datalink_t *datalink, char * buffer) {
 		++datalink->num_received_data_frames;
 
 		if(check_bcc2(&frame)) {
-			if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
+			if(ORDER_BIT(datalink->curr_seq_number) == frame.control_field) {
 				printf("REJ\n");
 				send_REJ(datalink);
 				++datalink->num_sent_REJs;
