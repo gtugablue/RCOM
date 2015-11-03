@@ -2,7 +2,7 @@
 
 struct termios oldtio;	// TO ALLOW serial_terminate TO WORK
 
-int serial_initialize(const char *serial_port, int vmin, int vtime) {
+int serial_initialize(const char *serial_port, int vmin, int vtime, int baudrate) {
 	struct termios newtio;
 	int fd = open(serial_port, O_RDWR | O_NOCTTY);
 	if (fd <0) {
@@ -15,8 +15,11 @@ int serial_initialize(const char *serial_port, int vmin, int vtime) {
 		return -1;
 	}
 
+	if(baudrate == 0)
+		baudrate = BAUDRATE;
+
 	bzero(&newtio, sizeof(newtio));
-	newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
+	newtio.c_cflag = baudrate | CS8 | CLOCAL | CREAD;
 	newtio.c_iflag = IGNPAR;
 	newtio.c_oflag = 0;
 

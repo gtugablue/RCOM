@@ -122,12 +122,13 @@ void datalink_init(datalink_t *datalink, unsigned int mode) {
 	datalink->num_timeouts = 0;
 	datalink->num_sent_REJs = 0;
 	datalink->num_received_REJs = 0;
+	datalink->baudrate = 0;
 }
 
 int llopen(const char *filename, datalink_t *datalink) {
 	int vtime = 0;
 	int vmin = 1;
-	int serial_fd = serial_initialize(filename, vmin, vtime);
+	int serial_fd = serial_initialize(filename, vmin, vtime, datalink->baudrate);
 	if (serial_fd < 0) {
 		printf("ERROR (llopen): serial_initialize failed.\n");
 		return 1;
@@ -444,7 +445,7 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 			continue;
 		}
 
-		if(answer.control_field == C_REJ((datalink->curr_seq_number)%2)) {
+		if(answer.control_field == C_REJ(datalink->curr_seq_number) {
 			printf("Got REJ, resending\n");
 			send_frame(datalink, &frame);
 			++datalink->num_received_REJs;

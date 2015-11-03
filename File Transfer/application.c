@@ -50,6 +50,7 @@ control_packet_param_t *get_param_by_type(const control_packet_t *control_packet
 void show_progress_bar(float progress);
 void print_usage(char *argv0);
 int cli();
+int baudrate = 0;
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
@@ -123,6 +124,7 @@ int send_file(const char *port, const char *file_name)
 	// Establish connection
 	datalink_t datalink;
 	datalink_init(&datalink, SENDER);
+	datalink->baudrate = baudrate;
 	if (llopen(port, &datalink)) return 1;
 
 	// Send start packet
@@ -225,6 +227,7 @@ int receive_file(const char *port, const char *destination_folder)
 	// Establish connection
 	datalink_t datalink;
 	datalink_init(&datalink, RECEIVER);
+	datalink->baudrate = baudrate;
 	if (llopen(port, &datalink)) return 1;
 	char buf[MAX_PACKET_SIZE];
 
@@ -419,6 +422,9 @@ int cli(){
 	}
 	printf("Port? ");
 	scanf("%s",port);
+
+	printf("Baudrate (0 to select default value)? ");
+	scanf("%d", &baudrate);
 
 	if (strcmp(mode, "send") == 0)
 		return send_file(port, fileName);

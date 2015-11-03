@@ -93,6 +93,7 @@ typedef struct {
 	unsigned num_timeouts;
 	unsigned num_sent_REJs;
 	unsigned num_received_REJs;
+	int baudrate;
 } datalink_t;
 
 /*
