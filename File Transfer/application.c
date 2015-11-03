@@ -57,6 +57,7 @@ int timeout = DEFAULT_TIMEOUT;
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
+	srand(time(NULL));
 	if (argc == 1) return cli();
 	if (argc != 4 && argc != 3)
 	{

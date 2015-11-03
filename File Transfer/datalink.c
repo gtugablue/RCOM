@@ -7,6 +7,10 @@
 #include "serial.h"
 #include "frame_validator.h"
 
+#define INDUCE_ERROR 1
+#define BCC1_ERR_PROB 10
+#define BCC2_ERR_PROB 10
+
 typedef struct {
 	datalink_t *datalink;
 	unsigned int tries_left;
@@ -35,6 +39,7 @@ int check_frame_order(datalink_t *datalink, frame_t *frame);
 int send_REJ(datalink_t *datalink);
 int send_RR(datalink_t *datalink);
 int send_UA(datalink_t *datalink);
+int probability(int value);
 
 alarm_info_t alrm_info;
 void alarm_handler() {
@@ -531,34 +536,48 @@ int llread(datalink_t *datalink, char * buffer) {
 			return 1;
 		}
 
-		if(check_bcc1(&frame)) {
-			continue;
-		}
+		int probability_check = 2;
 
-		if(frame.type == CMD_FRAME) {
-			if(frame.control_field == C_SET) {
-				if(send_UA(datalink)) {
-					printf("Got SET but unable to answer UA\n");
+		while(probability_check-- > 0) {
+			if(check_bcc1(&frame)) {
+				continue;
+			}
+
+			if(frame.type == CMD_FRAME) {
+				if(frame.control_field == C_SET) {
+					if(send_UA(datalink)) {
+						printf("Got SET but unable to answer UA\n");
+						continue;
+					}
+				}
+			}
+
+			++datalink->num_received_data_frames;
+
+			if(check_bcc2(&frame)) {
+				if(ORDER_BIT(datalink->curr_seq_number) == frame.control_field) {
+					printf("REJ\n");
+					send_REJ(datalink);
+					++datalink->num_sent_REJs;
+					continue;
+				} else {
+					printf("BCC2 failed.\n");
+					printf("RR%d\n", datalink->curr_seq_number);
+					send_RR(datalink);
 					continue;
 				}
 			}
-		}
 
-		++datalink->num_received_data_frames;
+			if(probability(BCC1_ERR_PROB)) {
+				frame->bcc1 += 13;	// INDUCE BCC1 ERROR
+			}
 
-		if(check_bcc2(&frame)) {
-			if(ORDER_BIT(datalink->curr_seq_number) == frame.control_field) {
-				printf("REJ\n");
-				send_REJ(datalink);
-				++datalink->num_sent_REJs;
-				continue;
-			} else {
-				printf("BCC2 failed.\n");
-				printf("RR%d\n", datalink->curr_seq_number);
-				send_RR(datalink);
-				continue;
+			if(probability(BCC2_ERR_PROB)) {
+				frame->bcc2 += 13;	// INDUCE BCC2 ERROR
 			}
 		}
+
+
 
 		if(ORDER_BIT(datalink->curr_seq_number) != frame.control_field) {
 			printf("BCC2 failed.\n");
@@ -834,6 +853,11 @@ int get_frame(datalink_t *datalink, frame_t *frame) {
 	//printf("\n\tLEFT State Machine\n\n");
 
 	return 0;
+}
+
+int probability(int value) {
+	int num = rand() % 100;
+	return num < value;
 }
 
 /*
