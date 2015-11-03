@@ -123,6 +123,8 @@ void datalink_init(datalink_t *datalink, unsigned int mode) {
 	datalink->num_sent_REJs = 0;
 	datalink->num_received_REJs = 0;
 	datalink->baudrate = 0;
+	datalink->max_retransmissions = DEFAULT_RETRANSMISSIONS;
+	datalink->timeout = DEFAULT_TIMEOUT;
 }
 
 int llopen(const char *filename, datalink_t *datalink) {
@@ -200,8 +202,8 @@ int llopen_transmitter(datalink_t *datalink) {
 	frame.address_field = A_TRANSMITTER;
 
 	alrm_info.datalink = datalink;
-	alrm_info.tries_left = INIT_CONNECTION_TRIES;
-	alrm_info.time_dif = INIT_CONNECTION_RESEND_TIME;
+	alrm_info.tries_left = datalink->max_retransmissions;
+	alrm_info.time_dif = datalink->timeout;
 	alrm_info.frame = &frame;
 	alrm_info.stop = 0;
 
@@ -246,9 +248,9 @@ int llopen_receiver(datalink_t *datalink) {
 	sigaction(SIGALRM, NULL, &sa);
 	sa.sa_handler = alarm_handler;
 	sigaction(SIGALRM, &sa, NULL);
-	alarm(15);
+	alarm(datalink->timeout);
 
-	int attempts = INIT_CONNECTION_TRIES;
+	int attempts = datalink->max_retransmissions;
 
 	while (attempts > 0) {
 		frame_t frame;
@@ -297,8 +299,8 @@ int llclose_transmitter(datalink_t *datalink) {
 	frame.address_field = A_TRANSMITTER;
 
 	alrm_info.datalink = datalink;
-	alrm_info.tries_left = FINAL_DISCONNECTION_TRIES;
-	alrm_info.time_dif = FINAL_DISCONNECTION_RESEND_TIME;
+	alrm_info.tries_left = datalink->max_retransmissions;
+	alrm_info.time_dif = datalink->timeout;
 	alrm_info.frame = &frame;
 	alrm_info.stop = 0;
 
@@ -343,8 +345,8 @@ int llclose_receiver(datalink_t *datalink) {
 
 	alrm_info.tries_left = 0;
 	alrm_info.stop = 1;
-	int attempts = FINAL_DISCONNECTION_TRIES;
-	alarm(15);
+	int attempts = datalink->max_retransmissions;
+	alarm(datalink->timeout);
 
 	while (attempts > 0) {
 		frame_t frame;
@@ -392,7 +394,7 @@ int llclose_receiver(datalink_t *datalink) {
 }
 
 int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
-	unsigned attempts = LLWRITE_ANSWER_TRIES;
+	unsigned attempts = datalink->max_retransmissions;
 	frame_t frame;
 	frame.sequence_number = datalink->curr_seq_number;
 	if ((frame.buffer = malloc(length)) == NULL) {
@@ -406,8 +408,8 @@ int llwrite(datalink_t *datalink, const unsigned char *buffer, int length) {
 	frame.address_field = A_TRANSMITTER;
 
 	alrm_info.datalink = datalink;
-	alrm_info.tries_left = LLWRITE_ANSWER_TRIES;
-	alrm_info.time_dif = LLWRITE_ANSWER_TIMEOUT;
+	alrm_info.tries_left = datalink->max_retransmissions;
+	alrm_info.time_dif = datalink->timeout;
 	alrm_info.frame = &frame;
 	alrm_info.stop = 0;
 
@@ -518,7 +520,7 @@ int llread(datalink_t *datalink, char * buffer) {
 	alarm(15);
 
 	frame_t frame;
-	int tries = LLREAD_VALIDMSG_TRIES;
+	int tries = datalink->max_retransmissions;
 	while(tries-- > 0) {
 		int ret = get_frame(datalink, &frame);
 		if(ret == READ_ERROR) {

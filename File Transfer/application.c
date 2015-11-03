@@ -52,6 +52,8 @@ void print_usage(char *argv0);
 int cli();
 int baudrate = 0;
 int max_packet_size = MAX_PACKET_SIZE;
+int retransmission = DEFAULT_RETRANSMISSIONS;
+int timeout = DEFAULT_TIMEOUT;
 
 int main(int argc, char *argv[]) // ./file_transfer <port> <send|receive> <filename>
 {
@@ -126,6 +128,8 @@ int send_file(const char *port, const char *file_name)
 	datalink_t datalink;
 	datalink_init(&datalink, SENDER);
 	datalink->baudrate = baudrate;
+	datalink->timeout = timeout;
+	datalink->max_retransmissions = retransmission;
 	if (llopen(port, &datalink)) return 1;
 
 	// Send start packet
@@ -229,6 +233,8 @@ int receive_file(const char *port, const char *destination_folder)
 	datalink_t datalink;
 	datalink_init(&datalink, RECEIVER);
 	datalink->baudrate = baudrate;
+	datalink->timeout = timeout;
+	datalink->max_retransmissions = retransmission;
 	if (llopen(port, &datalink)) return 1;
 	char buf[max_packet_size];
 
@@ -433,12 +439,27 @@ int cli(){
 		printf("Max data packet size (0 to select default value, other values between 10 and 200)? ");
 		scanf("%d", &max_packet_size);
 
+		if(max_packet_size == 0) {
+			max_packet_size = MAX_PACKET_SIZE;
+			break;
+		}
+
 		if(max_packet_size < 10 || max_packet_size > 200) {
 			printf("Invalid input!\n");
 			max_packet_size = MAX_PACKET_SIZE;
 			continue;
 		}
 	}
+
+	printf("Timeout (0 to select default value)? ");
+	scanf("%d", &timeout);
+	if(timeout == 0)
+		timeout = DEFAULT_TIMEOUT;
+
+	printf("Max retransmissions (0 to select default value)? ");
+	scanf("%d", &retransmission);
+	if(retransmission == 0)
+		retransmission = DEFAULT_RETRANSMISSIONS;
 
 	if (strcmp(mode, "send") == 0)
 		return send_file(port, fileName);

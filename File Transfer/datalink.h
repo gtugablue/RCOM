@@ -82,6 +82,9 @@ typedef enum {
 	LAST
 } frame_order_t;
 
+#define DEFAULT_RETRANSMISSIONS 3
+#define DEFAULT_TIMEOUT 15
+
 typedef struct {
 	int fd;
 	int mode;
@@ -94,6 +97,8 @@ typedef struct {
 	unsigned num_sent_REJs;
 	unsigned num_received_REJs;
 	int baudrate;
+	unsigned max_retransmissions;
+	unsigned timeout;
 } datalink_t;
 
 /*
