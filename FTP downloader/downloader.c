@@ -5,16 +5,17 @@
 int main()
 {
 	char source[] = "ftp://fe.up.pt/dir";
-	char regexString[] = "^ftp://((.*):(.*)@)?(.+)/(.*)$";
+	char regexString[] = "^ftp://((([^:@/]*)(:([^:@/]*))?)?@)?([^:@/]+)/(.*)$";
 
 	regex_t regex;
 
 	size_t maxGroups = 10;
 	regmatch_t groupArray[maxGroups];
 
-	if (regcomp(&regex, regexString, REG_EXTENDED))
+	int res;
+	if ((res = regcomp(&regex, regexString, REG_EXTENDED)))
 	{
-		printf("Error: could not compile regex.\n");
+		printf("Error #%d compiling regex.\n", res);
 		return 1;
 	}
 	else
