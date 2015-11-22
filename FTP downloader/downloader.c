@@ -31,26 +31,26 @@ int main(int argc, char *argv[])
 
 bool validateURL(const char *url)
 {
-	char regexString[] = "^ftp://"		// ftp://
+	char regexString[] = "^ftp://"	// ftp://
 			"("
 			"("
 			"("
-			"[^:@/]*"		// <user>
+			"[^:@/]*"	// <user>
 			")"
 			"("
-			":"				// :
+			":"			// :
 			"("
 			"[^:@/]*"	// <pass>
 			")"
 			")?"
 			")?"
-			"@"						// @
+			"@"			// @
 			")?"
 			"("
-			"[^:@/]+"				// <host>
+			"[^:@/]+"	// <host>
 			")"
-			"/"							// /
-			"(.*)"						// <dir>
+			"/"			// /
+			"(.*)"		// <dir>
 			"$";
 
 	regex_t regex;
