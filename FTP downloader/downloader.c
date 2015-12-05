@@ -36,6 +36,8 @@ int main(int argc, char *argv[])
 	int sockfd = socket_connect(&address, FTP_DEFAULT_PORT);
 	if (sockfd < 0) return 1;
 
+	close(sockfd);
+
 	free(user);
 	free(pass);
 	free(host);
