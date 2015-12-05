@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
 	struct in_addr address;
 	if (host_to_address(host, &address)) return 1;
-	int sockfd = socket_connect(address, FTP_DEFAULT_PORT);
+	int sockfd = socket_connect(&address, FTP_DEFAULT_PORT);
 	if (sockfd < 0) return 1;
 
 	free(user);
