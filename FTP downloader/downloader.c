@@ -4,8 +4,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#define FTP_DEFAULT_PORT 22
+
 bool validateURL(const char *url);
 int parseURL(const char *url, char **user, char **pass, char **host, char **dir);
+int socket_connect(char *server_address, unsigned port server_port);
 
 int main(int argc, char *argv[])
 {
@@ -21,6 +24,10 @@ int main(int argc, char *argv[])
 	char *host;
 	char *dir;
 	parseURL(argv[1], &user, &pass, &host, &dir);
+
+	int sockfd = socket_connect(host, FTP_DEFAULT_PORT);
+	if (sockfd < 0) return 1;
+
 	free(user);
 	free(pass);
 	free(host);
@@ -129,4 +136,32 @@ int parseURL(const char *url, char **user, char **pass, char **host, char **dir)
 	if (*dir != NULL) printf("Dir: %s\n", *dir);
 
 	return 0;
+}
+
+int socket_connect(char *server_address, unsigned port server_port) {
+	int	sockfd;
+	struct	sockaddr_in server_addr;
+	char	buf[] = "Mensagem de teste na travessia da pilha TCP/IP\n";
+	int	bytes;
+
+	/*server address handling*/
+	bzero((char*)&server_addr,sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = inet_addr(server_address);	/*32 bit Internet address network byte ordered*/
+	server_addr.sin_port = htons(server_port);		/*server TCP port must be network byte ordered */
+
+	/*open an TCP socket*/
+	if ((sockfd = socket(AF_INET,SOCK_STREAM,0)) < 0) {
+		perror("socket()");
+		return -1;
+	}
+	/*connect to the server*/
+	if(connect(sockfd,
+			(struct sockaddr *)&server_addr,
+			sizeof(server_addr)) < 0){
+		perror("connect()");
+		return -1;
+	}
+
+	return sockfd;
 }
