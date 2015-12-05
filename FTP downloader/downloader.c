@@ -183,6 +183,6 @@ int host_to_address(const char *host, struct in_addr *address) {
 	}
 	printf("Host name  : %s\n", h->h_name);
 	printf("IP Address : %s\n",inet_ntoa(*((struct in_addr *)h->h_addr)));
-	address = (struct in_addr *)h->h_addr;
+	*address = *(struct in_addr *)h->h_addr;
 	return 0;
 }
