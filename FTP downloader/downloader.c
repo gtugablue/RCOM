@@ -157,8 +157,6 @@ int socket_connect(struct in_addr *server_address, unsigned server_port) {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = server_address->s_addr;	/*32 bit Internet address network byte ordered*/
 	server_addr.sin_port = htons(server_port);		/*server TCP port must be network byte ordered */
-	printf("IP: %s\n", inet_ntoa(*server_address));
-	printf("IP: %s\n", inet_ntoa(server_addr.sin_addr));
 	/*open an TCP socket*/
 	if ((sockfd = socket(AF_INET,SOCK_STREAM,0)) < 0) {
 		perror("socket()");
@@ -171,7 +169,7 @@ int socket_connect(struct in_addr *server_address, unsigned server_port) {
 		perror("connect()");
 		return -1;
 	}
-
+	printf("Successfully connected to %s:%d.\n", inet_ntoa(*server_address), server_port);
 	return sockfd;
 }
 
@@ -181,8 +179,6 @@ int host_to_address(const char *host, struct in_addr *address) {
 		herror("gethostbyname");
 		return 1;
 	}
-	printf("Host name  : %s\n", h->h_name);
-	printf("IP Address : %s\n",inet_ntoa(*((struct in_addr *)h->h_addr)));
 	*address = *(struct in_addr *)h->h_addr;
 	return 0;
 }
