@@ -9,7 +9,7 @@
 
 bool validateURL(const char *url);
 int parseURL(const char *url, char **user, char **pass, char **host, char **dir);
-int socket_connect(char *server_address, unsigned port server_port);
+int socket_connect(char *server_address, unsigned server_port);
 
 int main(int argc, char *argv[])
 {
@@ -139,7 +139,7 @@ int parseURL(const char *url, char **user, char **pass, char **host, char **dir)
 	return 0;
 }
 
-int socket_connect(char *server_address, unsigned port server_port) {
+int socket_connect(char *server_address, unsigned server_port) {
 	int	sockfd;
 	struct	sockaddr_in server_addr;
 	char	buf[] = "Mensagem de teste na travessia da pilha TCP/IP\n";
