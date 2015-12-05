@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <netinet/in.h>
 
 #define FTP_DEFAULT_PORT 22
 
