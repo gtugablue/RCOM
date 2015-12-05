@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#define FTP_DEFAULT_PORT 22
+#define FTP_DEFAULT_PORT 21
 
 bool validateURL(const char *url);
 int parseURL(const char *url, char **user, char **pass, char **host, char **dir);
