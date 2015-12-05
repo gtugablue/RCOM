@@ -149,7 +149,7 @@ int socket_connect(char *server_address, unsigned port server_port) {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = inet_addr(server_address);	/*32 bit Internet address network byte ordered*/
 	server_addr.sin_port = htons(server_port);		/*server TCP port must be network byte ordered */
-
+	printf("IP: 0x%X\n", server_addr.s_addr);
 	/*open an TCP socket*/
 	if ((sockfd = socket(AF_INET,SOCK_STREAM,0)) < 0) {
 		perror("socket()");
