@@ -155,7 +155,7 @@ int socket_connect(struct in_addr *server_address, unsigned server_port) {
 	/*server address handling*/
 	bzero((char*)&server_addr,sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = server_address->s_addr;	/*32 bit Internet address network byte ordered*/
+	server_addr.sin_addr = server_address;	/*32 bit Internet address network byte ordered*/
 	server_addr.sin_port = htons(server_port);		/*server TCP port must be network byte ordered */
 	printf("IP: %s\n", inet_ntoa(server_addr.sin_addr));
 	/*open an TCP socket*/
