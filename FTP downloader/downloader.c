@@ -13,7 +13,7 @@
 
 bool validateURL(const char *url);
 int parseURL(const char *url, char **user, char **pass, char **host, char **dir);
-int socket_connect(char *server_address, unsigned server_port);
+int socket_connect(struct in_addr *server_address, unsigned server_port);
 int host_to_address(const char *host, struct in_addr *address);
 
 int main(int argc, char *argv[])
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
 	struct in_addr address;
 	if (host_to_address(host, &address)) return 1;
-	int sockfd = socket_connect(address.s_addr, FTP_DEFAULT_PORT);
+	int sockfd = socket_connect(address, FTP_DEFAULT_PORT);
 	if (sockfd < 0) return 1;
 
 	free(user);
@@ -146,7 +146,7 @@ int parseURL(const char *url, char **user, char **pass, char **host, char **dir)
 	return 0;
 }
 
-int socket_connect(char *server_address, unsigned server_port) {
+int socket_connect(struct in_addr *server_address, unsigned server_port) {
 	int	sockfd;
 	struct	sockaddr_in server_addr;
 	char	buf[] = "Mensagem de teste na travessia da pilha TCP/IP\n";
@@ -155,7 +155,7 @@ int socket_connect(char *server_address, unsigned server_port) {
 	/*server address handling*/
 	bzero((char*)&server_addr,sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr(server_address);	/*32 bit Internet address network byte ordered*/
+	server_addr.sin_addr.s_addr = server_address->s_addr;	/*32 bit Internet address network byte ordered*/
 	server_addr.sin_port = htons(server_port);		/*server TCP port must be network byte ordered */
 	printf("IP: 0x%X\n", server_addr.sin_addr.s_addr);
 	/*open an TCP socket*/
