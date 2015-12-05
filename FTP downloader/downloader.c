@@ -7,12 +7,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 #define FTP_DEFAULT_PORT 22
 
 bool validateURL(const char *url);
 int parseURL(const char *url, char **user, char **pass, char **host, char **dir);
 int socket_connect(char *server_address, unsigned server_port);
+int host_to_address(const char *host, struct in_addr *address);
 
 int main(int argc, char *argv[])
 {
@@ -29,6 +31,8 @@ int main(int argc, char *argv[])
 	char *dir;
 	parseURL(argv[1], &user, &pass, &host, &dir);
 
+	struct in_addr address;
+	if (host_to_address(host, &address)) return 1;
 	int sockfd = socket_connect(host, FTP_DEFAULT_PORT);
 	if (sockfd < 0) return 1;
 
@@ -168,4 +172,14 @@ int socket_connect(char *server_address, unsigned server_port) {
 	}
 
 	return sockfd;
+}
+
+int host_to_address(const char *host, struct in_addr *address) {
+	struct hostent *h;
+	if ((h=gethostbyname(host)) == NULL) {
+		herror("gethostbyname");
+		return 1;
+	}
+	address = (struct in_addr *)h->h_addr;
+	return 0;
 }
