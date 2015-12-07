@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <unistd.h>
 
 #define FTP_DEFAULT_PORT 21
 
@@ -15,6 +16,7 @@ bool validateURL(const char *url);
 int parseURL(const char *url, char **user, char **pass, char **host, char **dir);
 int socket_connect(struct in_addr *server_address, unsigned server_port);
 int host_to_address(const char *host, struct in_addr *address);
+int download(const char* user, const char *pass, const char *host, const char *dir);
 
 int main(int argc, char *argv[])
 {
@@ -30,19 +32,27 @@ int main(int argc, char *argv[])
 	char *host;
 	char *dir;
 	parseURL(argv[1], &user, &pass, &host, &dir);
-
-	struct in_addr address;
-	if (host_to_address(host, &address)) return 1;
-	int sockfd = socket_connect(&address, FTP_DEFAULT_PORT);
-	if (sockfd < 0) return 1;
-
-	close(sockfd);
+	bool error = false;
+	if (download(user, pass, host, dir)) {
+		printf("Error downloading file.\n");
+		error = true;
+	}
 
 	free(user);
 	free(pass);
 	free(host);
 	free(dir);
 
+	return error ? 1 : 0;
+}
+
+int download(const char* user, const char *pass, const char *host, const char *dir) {
+	struct in_addr address;
+	if (host_to_address(host, &address)) return 1;
+	int sockfd = socket_connect(&address, FTP_DEFAULT_PORT);
+	if (sockfd < 0) return 1;
+
+	close(sockfd);
 	return 0;
 }
 
@@ -151,8 +161,6 @@ int parseURL(const char *url, char **user, char **pass, char **host, char **dir)
 int socket_connect(struct in_addr *server_address, unsigned server_port) {
 	int	sockfd;
 	struct	sockaddr_in server_addr;
-	char	buf[] = "Mensagem de teste na travessia da pilha TCP/IP\n";
-	int	bytes;
 
 	/*server address handling*/
 	bzero((char*)&server_addr,sizeof(server_addr));
