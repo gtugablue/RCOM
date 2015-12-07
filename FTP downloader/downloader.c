@@ -11,14 +11,26 @@
 #include <unistd.h>
 
 #define FTP_DEFAULT_PORT 21
+#define BUFFER_SIZE 9000
+
+typedef struct {
+	int sockfd;
+	const char *user;
+	const char *pass;
+	const char *host;
+	const char *dir;
+} Downloader;
 
 bool validateURL(const char *url);
 int parseURL(const char *url, char **user, char **pass, char **host, char **dir);
 int socket_connect(struct in_addr *server_address, unsigned server_port);
 int host_to_address(const char *host, struct in_addr *address);
 int download(const char* user, const char *pass, const char *host, const char *dir);
-int socket_send(int sockfd, const char *cmd, const char *arg);
-int socket_receive(int sockfd);
+int socket_send(const Downloader *downloader, const char *cmd, const char *arg);
+int socket_receive(const Downloader *downloader, char *buf, unsigned length);
+int ftp_send_username(const Downloader *downloader);
+int ftp_send_password(const Downloader *downloader);
+int ftp_passive_mode(const Downloader *downloader);
 
 int main(int argc, char *argv[])
 {
@@ -54,32 +66,76 @@ int download(const char* user, const char *pass, const char *host, const char *d
 	int sockfd = socket_connect(&address, FTP_DEFAULT_PORT);
 	if (sockfd < 0) return 1;
 
-	if (socket_send(sockfd, "USER", user)) return 1;
-	socket_receive(sockfd);
+	Downloader downloader;
+	downloader.sockfd = sockfd;
+	downloader.user = user;
+	downloader.pass = pass;
+	downloader.host = host;
+	downloader.dir = dir;
+
+	char buf[100];
+	socket_receive(&downloader, buf, 100);
+
+	if (ftp_send_username(&downloader)) return 1;
 
 	close(sockfd);
 	return 0;
 }
 
-int socket_send(int sockfd, const char *cmd, const char *arg) {
-	unsigned length = strlen(cmd) + sizeof(' ') + strlen(arg);
+int ftp_send_username(const Downloader *downloader) {
+	char buf[BUFFER_SIZE];
+	if (socket_send(downloader, "USER", downloader->user)) return 1;
+	socket_receive(downloader, buf, BUFFER_SIZE);
+	return ftp_send_password(downloader);
+}
+
+int ftp_send_password(const Downloader *downloader) {
+	char buf[BUFFER_SIZE];
+	if (socket_send(downloader, "PASS", downloader->pass)) return 1;
+	socket_receive(downloader, buf, BUFFER_SIZE);
+	return ftp_passive_mode(downloader);
+}
+
+int ftp_passive_mode(const Downloader *downloader) {
+	char buf[BUFFER_SIZE];
+	if (socket_send(downloader, "PASV", NULL)) return 1;
+	socket_receive(downloader, buf, BUFFER_SIZE);
+	return 0;
+}
+
+int socket_send(const Downloader *downloader, const char *cmd, const char *arg) {
+	unsigned length = strlen(cmd) + 1 + (arg == NULL ? 0 : strlen(arg)) + 2;
 	char buf[length + 1];
-	strcpy(buf, cmd);
-	strcat(buf, " ");
-	strcat(buf, arg);
-	if (send(sockfd, buf, length, 0) != length) {
+	if (arg == NULL)
+		sprintf(buf, "%s\r\n", cmd);
+	else
+		sprintf(buf, "%s %s\r\n", cmd, arg);
+	printf("> %s", buf);
+	fflush(stdout);
+	if (send(downloader->sockfd, buf, length, 0) != length) {
 		printf("Error sending \"%s\".\n", buf);
 		return 1;
 	}
 	return 0;
 }
 
-int socket_receive(int sockfd) { // TODO
-	while (1) {
-		char c;
-		recv(sockfd, &c, 1, 0);
-		printf("Read char #%d: %c.\n", (int)c, c);
+int socket_receive(const Downloader *downloader, char *buf, unsigned length) { // TODO
+	size_t i;
+	for (i = 0; i < length - 1; ++i)
+	{
+		unsigned r = recv(downloader->sockfd, &buf[i], 1, 0);
+		if (r != 1) {
+			if (r == 0) printf("Connection closed by the host.\n");
+			return 1;
+		}
+		if (buf[i] == '\n') {
+			buf[++i] = '\0';
+			printf("< %s", buf);
+			fflush(stdout);
+			return i;
+		}
 	}
+	return length;
 }
 
 bool validateURL(const char *url)
