@@ -17,6 +17,8 @@ int parseURL(const char *url, char **user, char **pass, char **host, char **dir)
 int socket_connect(struct in_addr *server_address, unsigned server_port);
 int host_to_address(const char *host, struct in_addr *address);
 int download(const char* user, const char *pass, const char *host, const char *dir);
+int socket_send(int sockfd, const char *cmd, const char *arg);
+int socket_receive(int sockfd);
 
 int main(int argc, char *argv[])
 {
@@ -52,8 +54,32 @@ int download(const char* user, const char *pass, const char *host, const char *d
 	int sockfd = socket_connect(&address, FTP_DEFAULT_PORT);
 	if (sockfd < 0) return 1;
 
+	if (socket_send(sockfd, "USER", user)) return 1;
+	socket_receive(sockfd);
+
 	close(sockfd);
 	return 0;
+}
+
+int socket_send(int sockfd, const char *cmd, const char *arg) {
+	unsigned length = strlen(cmd) + sizeof(' ') + strlen(arg);
+	char buf[length + 1];
+	strcpy(buf, cmd);
+	strcat(buf, " ");
+	strcat(buf, arg);
+	if (send(sockfd, buf, length, 0) != length) {
+		printf("Error sending \"%s\".\n", buf);
+		return 1;
+	}
+	return 0;
+}
+
+int socket_receive(int sockfd) { // TODO
+	while (1) {
+		char c;
+		recv(sockfd, &c, 1, 0);
+		printf("Read char #%d: %c.\n", (int)c, c);
+	}
 }
 
 bool validateURL(const char *url)
