@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #define FTP_DEFAULT_PORT 21
 #define BUFFER_SIZE 9000
@@ -18,19 +19,21 @@ typedef struct {
 	const char *user;
 	const char *pass;
 	const char *host;
-	const char *dir;
+	const char *path;
+	const char *filename;
 } Downloader;
 
 bool validateURL(const char *url);
-int parseURL(const char *url, char **user, char **pass, char **host, char **dir);
+int parseURL(const char *url, char **user, char **pass, char **host, char **path);
 int socket_connect(struct in_addr *server_address, unsigned server_port);
 int host_to_address(const char *host, struct in_addr *address);
-int download(const char* user, const char *pass, const char *host, const char *dir);
+int download(const char* user, const char *pass, const char *host, const char *path);
 int socket_send(const Downloader *downloader, const char *cmd, const char *arg);
 int socket_receive(const Downloader *downloader, char *buf, unsigned length);
 int ftp_send_username(const Downloader *downloader);
 int ftp_send_password(const Downloader *downloader);
 int ftp_passive_mode(const Downloader *downloader);
+int ftp_retrieve(const Downloader *downloader);
 
 int main(int argc, char *argv[])
 {
@@ -44,10 +47,10 @@ int main(int argc, char *argv[])
 	char *user;
 	char *pass;
 	char *host;
-	char *dir;
-	parseURL(argv[1], &user, &pass, &host, &dir);
+	char *path;
+	parseURL(argv[1], &user, &pass, &host, &path);
 	bool error = false;
-	if (download(user, pass, host, dir)) {
+	if (download(user, pass, host, path)) {
 		printf("Error downloading file.\n");
 		error = true;
 	}
@@ -55,12 +58,12 @@ int main(int argc, char *argv[])
 	free(user);
 	free(pass);
 	free(host);
-	free(dir);
+	free(path);
 
 	return error ? 1 : 0;
 }
 
-int download(const char* user, const char *pass, const char *host, const char *dir) {
+int download(const char* user, const char *pass, const char *host, const char *path) {
 	struct in_addr address;
 	if (host_to_address(host, &address)) return 1;
 	int sockfd = socket_connect(&address, FTP_DEFAULT_PORT);
@@ -71,7 +74,7 @@ int download(const char* user, const char *pass, const char *host, const char *d
 	downloader.user = user;
 	downloader.pass = pass;
 	downloader.host = host;
-	downloader.dir = dir;
+	downloader.path = path;
 
 	char buf[100];
 	socket_receive(&downloader, buf, 100);
@@ -99,6 +102,39 @@ int ftp_send_password(const Downloader *downloader) {
 int ftp_passive_mode(const Downloader *downloader) {
 	char buf[BUFFER_SIZE];
 	if (socket_send(downloader, "PASV", NULL)) return 1;
+	socket_receive(downloader, buf, BUFFER_SIZE);
+
+	int ip[4];
+	unsigned port[2];
+	if (sscanf(buf, "227 Entering Passive Mode (%d, %d, %d, %d, %d, %d)", &ip[0], &ip[1], &ip[2], &ip[3], &port[0], &port[1]) < 6)
+	{
+		printf("Error reading passive mode info.\n");
+		return 1;
+	}
+
+	char final_ip[3 * 4 + 3];
+	unsigned final_port;
+	if ((sprintf(final_ip, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3])) < 0) return 1;
+	final_port = port[0] * 256 + port[1];
+
+	printf("Passive IP: %s\n", final_ip);
+	printf("Passive Port: %d\n", final_port);
+
+	struct in_addr addr;
+	addr.s_addr = inet_addr(final_ip);
+	int pasvsockfd = socket_connect(&addr, final_port);
+	if (pasvsockfd < 0) {
+		printf("Error connecting to passive FTP.\n");
+		return 1;
+	}
+	return ftp_retrieve(downloader);
+}
+
+int ftp_retrieve(const Downloader *downloader) {
+	char buf[BUFFER_SIZE];
+	strcpy(buf, downloader->path);
+	sleep(1);
+	if (socket_send(downloader, "RETR", basename(buf))) return 1;
 	socket_receive(downloader, buf, BUFFER_SIZE);
 	return 0;
 }
@@ -159,7 +195,7 @@ bool validateURL(const char *url)
 			"[^:@/]+"	// <host>
 			")"
 			"/"			// /
-			"(.*)"		// <dir>
+			"(.*)"		// <path>
 			"$";
 
 	regex_t regex;
@@ -187,7 +223,7 @@ bool validateURL(const char *url)
 	}
 }
 
-int parseURL(const char *url, char **user, char **pass, char **host, char **dir)
+int parseURL(const char *url, char **user, char **pass, char **host, char **path)
 {
 	const char *temp = url;
 	if ((temp = strchr(temp, '/')) == NULL) return 1;
@@ -220,22 +256,22 @@ int parseURL(const char *url, char **user, char **pass, char **host, char **dir)
 	}
 
 	temp = (atSign == NULL ? temp : atSign + 1);
-	char *dir_slash = strchr(temp, '/');
-	length = dir_slash - temp;
+	char *path_slash = strchr(temp, '/');
+	length = path_slash - temp;
 	if ((*host = malloc((length + 1) * sizeof(char))) == NULL) return 1;
 	memcpy(*host, temp, length);
 	*(*host + length) = '\0';
 
-	temp = dir_slash + 1;
+	temp = path_slash + 1;
 	length = strlen(temp);
-	if ((*dir = malloc((length + 1) * sizeof(char))) == NULL) return 1;
-	memcpy(*dir, temp, length);
-	*(*dir + length) = '\0';
+	if ((*path = malloc((length + 1) * sizeof(char))) == NULL) return 1;
+	memcpy(*path, temp, length);
+	*(*path + length) = '\0';
 
 	if (*user != NULL) printf("User: %s\n", *user);
 	if (*pass != NULL) printf("Pass: %s\n", *pass);
 	if (*host != NULL) printf("Host: %s\n", *host);
-	if (*dir != NULL) printf("Dir: %s\n", *dir);
+	if (*path != NULL) printf("path: %s\n", *path);
 
 	return 0;
 }
