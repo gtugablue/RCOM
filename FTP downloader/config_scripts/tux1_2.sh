@@ -20,3 +20,15 @@ ifconfig eth0 172.16.11.0/24
 route add default gw 172.16.11.253
 arp -d 172.16.11.1
 arp -d 172.16.11.253
+
+#Experiment 4
+#	Make default route to rc
+route add default gw 172.16.11.254
+
+#		FALTA ADICIONAR ROUTE PARA 172.16.10.0/24
+
+echo 0 > /proc/sys/net/ipv4/conf/eth0/accept_redirects
+echo 0 > /proc/sys/net/ipv4/conf/all/accept_redirects
+
+# FALTA REMOVER ROUTE PARA 172.16.10.0/24 via tux4
+# READICIONAR ROUTE ^

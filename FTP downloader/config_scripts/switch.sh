@@ -49,3 +49,11 @@ interface fastethernet 0/8
 switchport mode access
 switchport access vlan 11
 end
+
+#Experiment 4
+#	Add router port to vlan 11
+configure terminal
+interface fastethernet 0/9
+switchport mode access
+switchport access vlan 11
+end

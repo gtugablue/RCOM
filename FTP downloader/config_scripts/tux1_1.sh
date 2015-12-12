@@ -22,3 +22,7 @@ arp -d 172.16.10.254
 route add default gw 172.16.10.254
 arp -d 172.16.10.1
 arp -d 172.16.10.254
+
+#Experiment 4
+#	Make default route to tux4
+route add default gw 172.16.10.254
