@@ -1,4 +1,11 @@
 #Configuration for switch
+#Reiniciar o switch
+del flash:vlan.dat
+copy flash:tuxy-clean startup-config
+reload
+#fazer configurações do guião e guardar com
+copy running-config flash:<turna-nome1-nome2-nome3>
+#reiniciar usando mesmos passos mas novo ficheiro em vez de tuxy-clean
 
 #Experiment 2
 #	Delete vlans 10, 11
@@ -31,6 +38,14 @@ end
 #		Add port 2 to vlan 11
 configure terminal
 interface fastethernet 0/2
+switchport mode access
+switchport access vlan 11
+end
+
+#Experiment 3
+#	Add secondary tux4 port to vlan 11
+configure terminal
+interface fastethernet 0/8
 switchport mode access
 switchport access vlan 11
 end
