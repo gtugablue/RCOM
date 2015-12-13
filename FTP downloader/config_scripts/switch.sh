@@ -1,7 +1,7 @@
 #Configuration for switch
 #Reiniciar o switch
 del flash:vlan.dat
-copy flash:tuxy-clean startup-config
+copy flash:tux<BANCADA>-clean startup-config
 reload
 #fazer configurações do guião e guardar com
 copy running-config flash:<turna-nome1-nome2-nome3>

@@ -14,21 +14,21 @@ ifconfig eth2 down
 ifconfig ath0 down
 
 #	Configure eth0
-ifconfig eth0 172.16.11.0/24
+ifconfig eth0 172.16.<BANCADA>1.0/24
 
 #Experiment 3
-route add default gw 172.16.11.253
-arp -d 172.16.11.1
-arp -d 172.16.11.253
+route add default gw 172.16.<BANCADA>1.253
+arp -d 172.16.<BANCADA>1.1
+arp -d 172.16.<BANCADA>1.253
 
 #Experiment 4
 #	Make default route to rc
-route add default gw 172.16.11.254
+route add default gw 172.16.<BANCADA>1.254
 
-#		FALTA ADICIONAR ROUTE PARA 172.16.10.0/24
+#		FALTA ADICIONAR ROUTE PARA 172.16.<BANCADA>0.0/24
 
 echo 0 > /proc/sys/net/ipv4/conf/eth0/accept_redirects
 echo 0 > /proc/sys/net/ipv4/conf/all/accept_redirects
 
-# FALTA REMOVER ROUTE PARA 172.16.10.0/24 via tux4
+# FALTA REMOVER ROUTE PARA 172.16.<BANCADA>0.0/24 via tux4
 # READICIONAR ROUTE ^
