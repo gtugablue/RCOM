@@ -17,7 +17,7 @@ ifconfig ath0 down
 ifconfig eth0 172.16.<BANCADA>0.254/24
 
 #Experiment 3
-ifconfig eth1 172.16.<BANCADA>1.253
+ifconfig eth1 172.16.<BANCADA>1.253/24
 arp -d 172.16.<BANCADA>0.1
 arp -d 172.16.<BANCADA>0.254
 arp -d 172.16.<BANCADA>1.1
