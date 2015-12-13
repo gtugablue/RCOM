@@ -133,14 +133,13 @@ int ftp_passive_mode(const Downloader *downloader) {
 int ftp_retrieve(const Downloader *downloader) {
 	char buf[BUFFER_SIZE];
 	strcpy(buf, downloader->path);
-	sleep(1);
 	if (socket_send(downloader, "RETR", basename(buf))) return 1;
 	socket_receive(downloader, buf, BUFFER_SIZE);
 	return 0;
 }
 
 int socket_send(const Downloader *downloader, const char *cmd, const char *arg) {
-	unsigned length = strlen(cmd) + 1 + (arg == NULL ? 0 : strlen(arg)) + 2;
+	unsigned length = strlen(cmd) + ((arg == NULL) ? 0 : (1 + strlen(arg))) + 2;
 	char buf[length + 1];
 	if (arg == NULL)
 		sprintf(buf, "%s\r\n", cmd);
