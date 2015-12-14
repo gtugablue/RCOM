@@ -16,6 +16,7 @@
 
 typedef struct {
 	int sockfd;
+	int pasvsockfd;
 	const char *user;
 	const char *pass;
 	const char *host;
@@ -24,7 +25,7 @@ typedef struct {
 } Downloader;
 
 bool validateURL(const char *url);
-int parseURL(const char *url, char **user, char **pass, char **host, char **path);
+int parseURL(const char *url, char **user, char **pass, char **host, char **dir, char **file);
 int socket_connect(struct in_addr *server_address, unsigned server_port);
 int host_to_address(const char *host, struct in_addr *address);
 int download(const char* user, const char *pass, const char *host, const char *path);
@@ -34,6 +35,7 @@ int ftp_send_username(const Downloader *downloader);
 int ftp_send_password(const Downloader *downloader);
 int ftp_passive_mode(const Downloader *downloader);
 int ftp_retrieve(const Downloader *downloader);
+int ftp_download(const Downloader *downloader);
 
 int main(int argc, char *argv[])
 {
@@ -47,8 +49,9 @@ int main(int argc, char *argv[])
 	char *user;
 	char *pass;
 	char *host;
-	char *path;
-	parseURL(argv[1], &user, &pass, &host, &path);
+	char *dir;
+	char *file;
+	parseURL(argv[1], &user, &pass, &host, &dir, &file);
 	bool error = false;
 	if (download(user, pass, host, path)) {
 		printf("Error downloading file.\n");
@@ -58,7 +61,8 @@ int main(int argc, char *argv[])
 	free(user);
 	free(pass);
 	free(host);
-	free(path);
+	free(dir);
+	free(file);
 
 	return error ? 1 : 0;
 }
@@ -122,7 +126,7 @@ int ftp_passive_mode(const Downloader *downloader) {
 
 	struct in_addr addr;
 	addr.s_addr = inet_addr(final_ip);
-	int pasvsockfd = socket_connect(&addr, final_port);
+	downloader->pasvsockfd = socket_connect(&addr, final_port);
 	if (pasvsockfd < 0) {
 		printf("Error connecting to passive FTP.\n");
 		return 1;
@@ -136,6 +140,9 @@ int ftp_retrieve(const Downloader *downloader) {
 	if (socket_send(downloader, "RETR", basename(buf))) return 1;
 	socket_receive(downloader, buf, BUFFER_SIZE);
 	return 0;
+}
+
+int ftp_download(const Downloader *downloader) {
 }
 
 int socket_send(const Downloader *downloader, const char *cmd, const char *arg) {
@@ -222,7 +229,7 @@ bool validateURL(const char *url)
 	}
 }
 
-int parseURL(const char *url, char **user, char **pass, char **host, char **path)
+int parseURL(const char *url, char **user, char **pass, char **host, char **dir, char **file)
 {
 	const char *temp = url;
 	if ((temp = strchr(temp, '/')) == NULL) return 1;
@@ -263,14 +270,22 @@ int parseURL(const char *url, char **user, char **pass, char **host, char **path
 
 	temp = path_slash + 1;
 	length = strlen(temp);
+	char path[length + 1];
 	if ((*path = malloc((length + 1) * sizeof(char))) == NULL) return 1;
 	memcpy(*path, temp, length);
 	*(*path + length) = '\0';
 
+	char path2[length + 1];
+	memcpy(path2, path, length + 1);
+	if ((*dir = malloc((length + 1) * sizeof(char))) == NULL) return 1;
+		memcpy(*dir, dirname(path2), length);
+		*(*path + length) = '\0';
+
 	if (*user != NULL) printf("User: %s\n", *user);
 	if (*pass != NULL) printf("Pass: %s\n", *pass);
 	if (*host != NULL) printf("Host: %s\n", *host);
-	if (*path != NULL) printf("path: %s\n", *path);
+	if (*dir != NULL) printf("Dir: %s\n", *dir);
+	if (*file != NULL) printf("File: %s\n", *file);
 
 	return 0;
 }
