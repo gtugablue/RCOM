@@ -21,21 +21,20 @@ typedef struct {
 	const char *pass;
 	const char *host;
 	const char *path;
-	const char *filename;
 } Downloader;
 
 bool validateURL(const char *url);
-int parseURL(const char *url, char **user, char **pass, char **host, char **dir, char **file);
+int parseURL(const char *url, char **user, char **pass, char **host, char **path);
 int socket_connect(struct in_addr *server_address, unsigned server_port);
 int host_to_address(const char *host, struct in_addr *address);
 int download(const char* user, const char *pass, const char *host, const char *path);
 int socket_send(const Downloader *downloader, const char *cmd, const char *arg);
 int socket_receive(const Downloader *downloader, char *buf, unsigned length);
-int ftp_send_username(const Downloader *downloader);
-int ftp_send_password(const Downloader *downloader);
-int ftp_passive_mode(const Downloader *downloader);
-int ftp_retrieve(const Downloader *downloader);
-int ftp_download(const Downloader *downloader);
+int ftp_send_username(Downloader *downloader);
+int ftp_send_password(Downloader *downloader);
+int ftp_passive_mode(Downloader *downloader);
+int ftp_retrieve(Downloader *downloader);
+int ftp_download(Downloader *downloader);
 
 int main(int argc, char *argv[])
 {
@@ -49,9 +48,8 @@ int main(int argc, char *argv[])
 	char *user;
 	char *pass;
 	char *host;
-	char *dir;
-	char *file;
-	parseURL(argv[1], &user, &pass, &host, &dir, &file);
+	char *path;
+	parseURL(argv[1], &user, &pass, &host, &path);
 	bool error = false;
 	if (download(user, pass, host, path)) {
 		printf("Error downloading file.\n");
@@ -61,8 +59,7 @@ int main(int argc, char *argv[])
 	free(user);
 	free(pass);
 	free(host);
-	free(dir);
-	free(file);
+	free(path);
 
 	return error ? 1 : 0;
 }
@@ -89,21 +86,21 @@ int download(const char* user, const char *pass, const char *host, const char *p
 	return 0;
 }
 
-int ftp_send_username(const Downloader *downloader) {
+int ftp_send_username(Downloader *downloader) {
 	char buf[BUFFER_SIZE];
 	if (socket_send(downloader, "USER", downloader->user)) return 1;
 	socket_receive(downloader, buf, BUFFER_SIZE);
 	return ftp_send_password(downloader);
 }
 
-int ftp_send_password(const Downloader *downloader) {
+int ftp_send_password(Downloader *downloader) {
 	char buf[BUFFER_SIZE];
 	if (socket_send(downloader, "PASS", downloader->pass)) return 1;
 	socket_receive(downloader, buf, BUFFER_SIZE);
 	return ftp_passive_mode(downloader);
 }
 
-int ftp_passive_mode(const Downloader *downloader) {
+int ftp_passive_mode(Downloader *downloader) {
 	char buf[BUFFER_SIZE];
 	if (socket_send(downloader, "PASV", NULL)) return 1;
 	socket_receive(downloader, buf, BUFFER_SIZE);
@@ -127,22 +124,18 @@ int ftp_passive_mode(const Downloader *downloader) {
 	struct in_addr addr;
 	addr.s_addr = inet_addr(final_ip);
 	downloader->pasvsockfd = socket_connect(&addr, final_port);
-	if (pasvsockfd < 0) {
+	if (downloader->pasvsockfd < 0) {
 		printf("Error connecting to passive FTP.\n");
 		return 1;
 	}
 	return ftp_retrieve(downloader);
 }
 
-int ftp_retrieve(const Downloader *downloader) {
+int ftp_retrieve(Downloader *downloader) {
 	char buf[BUFFER_SIZE];
-	strcpy(buf, downloader->path);
-	if (socket_send(downloader, "RETR", basename(buf))) return 1;
+	if (socket_send(downloader, "RETR", downloader->path)) return 1;
 	socket_receive(downloader, buf, BUFFER_SIZE);
 	return 0;
-}
-
-int ftp_download(const Downloader *downloader) {
 }
 
 int socket_send(const Downloader *downloader, const char *cmd, const char *arg) {
@@ -229,7 +222,7 @@ bool validateURL(const char *url)
 	}
 }
 
-int parseURL(const char *url, char **user, char **pass, char **host, char **dir, char **file)
+int parseURL(const char *url, char **user, char **pass, char **host, char **path)
 {
 	const char *temp = url;
 	if ((temp = strchr(temp, '/')) == NULL) return 1;
@@ -270,22 +263,14 @@ int parseURL(const char *url, char **user, char **pass, char **host, char **dir,
 
 	temp = path_slash + 1;
 	length = strlen(temp);
-	char path[length + 1];
 	if ((*path = malloc((length + 1) * sizeof(char))) == NULL) return 1;
 	memcpy(*path, temp, length);
 	*(*path + length) = '\0';
 
-	char path2[length + 1];
-	memcpy(path2, path, length + 1);
-	if ((*dir = malloc((length + 1) * sizeof(char))) == NULL) return 1;
-		memcpy(*dir, dirname(path2), length);
-		*(*path + length) = '\0';
-
 	if (*user != NULL) printf("User: %s\n", *user);
 	if (*pass != NULL) printf("Pass: %s\n", *pass);
 	if (*host != NULL) printf("Host: %s\n", *host);
-	if (*dir != NULL) printf("Dir: %s\n", *dir);
-	if (*file != NULL) printf("File: %s\n", *file);
+	if (*path != NULL) printf("Path: %s\n", *path);
 
 	return 0;
 }
