@@ -1,6 +1,6 @@
 #Configuration for router
 #Reiniciar o router
-copy flash:tux<BANCADA>-clean startup-config
+copy flash:tux<BANCADA>-clean startup-config	<03-andre-gustavo-ricardo>
 reload
 #fazer configurações do guião e guardar com
 copy running-config flash:<turna-nome1-nome2-nome3>
