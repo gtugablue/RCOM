@@ -1,6 +1,6 @@
 #Configuration for router
 #Reiniciar o router
-copy flash:tuxy-clean startup-config
+copy flash:tux<BANCADA>-clean startup-config
 reload
 #fazer configurações do guião e guardar com
 copy running-config flash:<turna-nome1-nome2-nome3>
@@ -9,7 +9,7 @@ copy running-config flash:<turna-nome1-nome2-nome3>
 #Experiment 4
 conf t
 interface gigabitethernet 0/0
-ip address 172.16.11.254 255.255.255.0
+ip address 172.16.<BANCADA>1.254 255.255.255.0
 no shutdown
 ip nat inside
 exit
@@ -23,13 +23,13 @@ exit
 ip nat pool ovrld 172.16.1.19 172.16.1.19 prefix 24
 ip nat inside source list 1 pool ovrld overload
 
-access-list 1 permit 172.16.10.0 0.0.0.7
-access-list 1 permit 172.16.11.0 0.0.0.7
+access-list 1 permit 172.16.<BANCADA>0.0 0.0.0.7
+access-list 1 permit 172.16.<BANCADA>1.0 0.0.0.7
 
-ip route 0.0.0.0 0.0.0.0 172.16.1.254
-ip route 172.16.10.0 255.255.255.0 172.16.11.253
+ip route 0.0.0.0 0.0.0.0 172.16.<BANCADA>1.254
+ip route 172.16.<BANCADA>0.0 255.255.255.0 172.16.<BANCADA>1.253
 end
 
-#		FALTA ADICIONAR ROUTE PARA 172.16.10.0/24
+#		FALTA ADICIONAR ROUTE PARA 172.16.<BANCADA>0.0/24
 
 #		ADICIONAR CAPACIDADE NAT AO ROUTER

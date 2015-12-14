@@ -14,15 +14,15 @@ ifconfig eth2 down
 ifconfig ath0 down
 
 #	Configure eth0
-ifconfig eth0 172.16.10.254/24
+ifconfig eth0 172.16.<BANCADA>0.254/24
 
 #Experiment 3
-ifconfig eth1 172.16.11.253
-arp -d 172.16.10.1
-arp -d 172.16.10.254
-arp -d 172.16.11.1
-arp -d 172.16.11.253
+ifconfig eth1 172.16.<BANCADA>1.253
+arp -d 172.16.<BANCADA>0.1
+arp -d 172.16.<BANCADA>0.254
+arp -d 172.16.<BANCADA>1.1
+arp -d 172.16.<BANCADA>1.253
 
 #Experiment 4
 #	Make default route to rc
-route add default gw 172.16.11.254
+route add default gw 172.16.<BANCADA>1.254
