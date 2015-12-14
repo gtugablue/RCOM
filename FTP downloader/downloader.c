@@ -291,7 +291,7 @@ bool validateURL(const char *url)
 			"[^:@/]+"	// <host>
 			")"
 			"/"			// /
-			"(.*)"		// <path>
+			"(.+)"		// <path>
 			"$";
 
 	regex_t regex;
