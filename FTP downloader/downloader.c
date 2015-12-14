@@ -135,6 +135,37 @@ int ftp_retrieve(Downloader *downloader) {
 	char buf[BUFFER_SIZE];
 	if (socket_send(downloader, "RETR", downloader->path)) return 1;
 	socket_receive(downloader, buf, BUFFER_SIZE);
+	return ftp_download(downloader);
+}
+
+int ftp_download(Downloader *downloader) {
+	FILE *fp;
+	unsigned length = strlen(downloader->path);
+	char path2[length];
+	char filename[length];
+	strcpy(path2, downloader->path);
+	strcpy(filename, basename(path2));
+	if ((fp = fopen(filename, "wb")) == NULL)
+	{
+		printf("Could not create output file.\n");
+		return 1;
+	}
+
+	char buf[BUFFER_SIZE];
+	int n;
+	while (true)
+	{
+		n = recv(downloader->pasvsockfd, buf, BUFFER_SIZE, 0);
+		printf("n: %d\n", n);
+		if (n < 0) return 1;
+		if (fwrite(buf, 1, n, fp) != n) {
+			printf("Error writing data to file.\n");
+			return 1;
+		}
+		if (n < BUFFER_SIZE) break;
+	}
+	if (fclose(fp) != 0) return 1;
+	if (close(downloader->pasvsockfd) == -1) return 1;
 	return 0;
 }
 
@@ -154,7 +185,7 @@ int socket_send(const Downloader *downloader, const char *cmd, const char *arg) 
 	return 0;
 }
 
-int socket_receive(const Downloader *downloader, char *buf, unsigned length) { // TODO
+int socket_receive(const Downloader *downloader, char *buf, unsigned length) {
 	size_t i;
 	for (i = 0; i < length - 1; ++i)
 	{
